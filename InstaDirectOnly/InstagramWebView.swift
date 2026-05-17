@@ -9,6 +9,7 @@ class WebViewRef {
 struct InstagramWebView: UIViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var webViewRef: WebViewRef?
+    @Binding var loadError: String?
 
     static let dmURL = URL(string: "https://www.instagram.com/direct/inbox/")!
 
@@ -127,6 +128,10 @@ struct InstagramWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             parent.isLoading = true
+            // 新規ロード開始時にエラーをクリア
+            if parent.loadError != nil {
+                parent.loadError = nil
+            }
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -136,7 +141,27 @@ struct InstagramWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            handleNavigationError(error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            handleNavigationError(error)
+        }
+
+        /// 共通のロード失敗処理。
+        /// 許可外URLのブロックやユーザ操作によるキャンセル (NSURLErrorCancelled) は
+        /// 「エラー」ではないので無視する。
+        private func handleNavigationError(_ error: Error) {
             parent.isLoading = false
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return
+            }
+            parent.loadError = error.localizedDescription
         }
 
         /// フィードや不要なUIを隠すCSSを注入
