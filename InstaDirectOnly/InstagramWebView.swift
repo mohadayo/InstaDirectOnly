@@ -67,23 +67,37 @@ struct InstagramWebView: UIViewRepresentable {
 
     // MARK: - URL判定
 
+    /// host が domain と完全一致するか、domain のサブドメインかを判定する。
+    /// `host.contains(domain)` のような部分一致は使わない
+    /// （`evil-instagram.com.attacker.example` 等の偽装を拒否するため）
+    private static func isHost(_ host: String, equalToOrSubdomainOf domain: String) -> Bool {
+        return host == domain || host.hasSuffix("." + domain)
+    }
+
+    /// path が target と完全一致するか、`target/` で始まるかを判定する。
+    /// `hasPrefix` 単独だと `/directfake` を誤って許可してしまうため、
+    /// セグメント境界を意識した一致を行う
+    private static func pathMatches(_ path: String, target: String) -> Bool {
+        return path == target || path.hasPrefix(target + "/")
+    }
+
     /// 指定URLがDM利用に必要かどうかを判定
     static func isAllowedURL(_ url: URL) -> Bool {
         guard let host = url.host?.lowercased() else { return false }
 
-        // CDN・認証系ホストは全て許可
-        if allowedHosts.contains(where: { host.contains($0) }) {
+        // CDN・認証系ホストは「完全一致 or サブドメイン」のみ許可
+        if allowedHosts.contains(where: { Self.isHost(host, equalToOrSubdomainOf: $0) }) {
             return true
         }
 
         // Instagramドメインの場合、パスで判定
-        if host.contains("instagram.com") {
+        if Self.isHost(host, equalToOrSubdomainOf: "instagram.com") {
             let path = url.path.lowercased()
             // ルートパスは許可（リダイレクト中に通過する）
             if path == "/" || path.isEmpty {
                 return true
             }
-            return allowedPaths.contains(where: { path.hasPrefix($0) })
+            return allowedPaths.contains(where: { Self.pathMatches(path, target: $0) })
         }
 
         return false
