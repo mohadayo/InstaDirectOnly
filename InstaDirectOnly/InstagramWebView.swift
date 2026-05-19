@@ -81,8 +81,20 @@ struct InstagramWebView: UIViewRepresentable {
         return path == target || path.hasPrefix(target + "/")
     }
 
+    /// 許可する URL スキーム。`http` / `https` のみを通し、`javascript:` `data:`
+    /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
+    static let allowedSchemes: Set<String> = ["http", "https"]
+
     /// 指定URLがDM利用に必要かどうかを判定
     static func isAllowedURL(_ url: URL) -> Bool {
+        // スキームの allowlist 検査を最初に行う。
+        // 例: `javascript://www.instagram.com/direct/inbox/` のように、ホスト位置に
+        // 既知ドメイン文字列を埋め込んだ URL は `url.host` が
+        // "www.instagram.com" を返しうるため、scheme で先に弾く必要がある。
+        guard let scheme = url.scheme?.lowercased(),
+              allowedSchemes.contains(scheme) else {
+            return false
+        }
         guard let host = url.host?.lowercased() else { return false }
 
         // CDN・認証系ホストは「完全一致 or サブドメイン」のみ許可
