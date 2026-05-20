@@ -40,6 +40,9 @@ struct InstagramWebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
+        // target="_blank" / window.open で開かれるリンクを WKUIDelegate で受け取り、
+        // 許可 URL なら同 WebView でロードする（デフォルト動作だと silent fail する）
+        webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         webView.isOpaque = false
         webView.backgroundColor = .black
@@ -117,7 +120,7 @@ struct InstagramWebView: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let parent: InstagramWebView
         private var hasCompletedInitialLoad = false
 
@@ -150,6 +153,26 @@ struct InstagramWebView: UIViewRepresentable {
                     webView.load(URLRequest(url: InstagramWebView.dmURL))
                 }
             }
+        }
+
+        // MARK: - WKUIDelegate
+
+        /// target="_blank" / window.open による新規ウィンドウ要求のハンドラ。
+        /// WKWebView は標準では新規ウィンドウを開けないため、デリゲート未実装だと
+        /// リンクをタップしても「無反応」になる（silent fail）。
+        /// ここでは URL allowlist を満たす場合のみ同じ WebView でロードし、
+        /// 許可外 URL は何もしない（外部ブラウザに飛ばさない＝ DM 外への離脱導線を作らない）。
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            if let url = navigationAction.request.url,
+               InstagramWebView.isAllowedURL(url) {
+                webView.load(navigationAction.request)
+            }
+            return nil
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
