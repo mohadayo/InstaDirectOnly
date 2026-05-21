@@ -94,6 +94,63 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowed("https://example.com/direct/inbox"))
     }
 
+    // MARK: - 正規化（大文字小文字 / ポート）
+
+    func test_allowsUppercaseHost() {
+        // `url.host` は実装側で `lowercased()` されるため、大文字混じりでも許可されること。
+        XCTAssertTrue(isAllowed("https://WWW.INSTAGRAM.COM/direct/inbox/"))
+    }
+
+    func test_allowsUppercasePath() {
+        // `url.path` も実装側で `lowercased()` されるため、大文字混じりでも許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/DIRECT/inbox/"))
+    }
+
+    func test_allowsExplicitHttpsPort() {
+        // ポートを明示しても `url.host` はホスト名のみを返すため、判定に影響しないこと。
+        XCTAssertTrue(isAllowed("https://www.instagram.com:443/direct/inbox/"))
+    }
+
+    func test_allowsInstagramApiSubdomain() {
+        // `i.instagram.com` 等のサブドメインも instagram.com のサブドメイン扱いで、
+        // 許可パス (`/api/v1`) と組み合わせれば通過すること。
+        XCTAssertTrue(isAllowed("https://i.instagram.com/api/v1/users/web_profile_info/"))
+    }
+
+    // MARK: - userinfo を使った偽装
+
+    func test_rejectsUserinfoMaskingEvilHost() {
+        // `https://www.instagram.com@evil.example/direct/` は RFC 上、
+        // host = `evil.example`（`www.instagram.com` は userinfo）。
+        // 部分一致や user フィールドを誤って参照していないか回帰する。
+        XCTAssertFalse(isAllowed("https://www.instagram.com@evil.example/direct/inbox/"))
+    }
+
+    func test_rejectsUserinfoWithPasswordMaskingEvilHost() {
+        // user:password 形式の userinfo でも結果は同じであること。
+        XCTAssertFalse(
+            isAllowedOrUnparseable("https://www.instagram.com:pw@evil.example/direct/inbox/")
+        )
+    }
+
+    // MARK: - 追加スキームの拒否
+
+    func test_rejectsBlobScheme() {
+        // WebKit の `blob:` URL（`blob:https://.../uuid`）は scheme="blob" で、
+        // allowlist (http/https のみ) を満たさないため拒否されること。
+        XCTAssertFalse(
+            isAllowedOrUnparseable("blob:https://www.instagram.com/00000000-0000-0000-0000-000000000000")
+        )
+    }
+
+    func test_rejectsWsScheme() {
+        XCTAssertFalse(isAllowedOrUnparseable("ws://www.instagram.com/direct/inbox/"))
+    }
+
+    func test_rejectsWssScheme() {
+        XCTAssertFalse(isAllowedOrUnparseable("wss://www.instagram.com/direct/inbox/"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
@@ -101,6 +158,14 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
             XCTFail("Failed to parse URL: \(urlString)")
             return false
         }
+        return InstagramWebView.isAllowedURL(url)
+    }
+
+    /// URL のパースに失敗する可能性のある入力（blob:, 異常な userinfo 等）の検査用。
+    /// パース不能なら「許可されない」と同義として `false` を返す（実機の WKWebView でも
+    /// `URLRequest(url: nil)` は構築できないため、外部に出ない点で同じ結果になる）。
+    private func isAllowedOrUnparseable(_ urlString: String) -> Bool {
+        guard let url = URL(string: urlString) else { return false }
         return InstagramWebView.isAllowedURL(url)
     }
 }
