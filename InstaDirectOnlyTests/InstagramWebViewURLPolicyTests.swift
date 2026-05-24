@@ -151,6 +151,76 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowedOrUnparseable("wss://www.instagram.com/direct/inbox/"))
     }
 
+    // MARK: - 追加で許可されるべきホスト（CDN・認証系の網羅）
+
+    func test_allowsFbcdnSubdomain() {
+        // `fbcdn.net` のサブドメインも CDN として許可されること。
+        XCTAssertTrue(isAllowed("https://static.fbcdn.net/rsrc.php/v3/app.js"))
+    }
+
+    func test_allowsFbsbxSubdomain() {
+        // `fbsbx.com`（lookaside 等）のサブドメインも許可されること。
+        XCTAssertTrue(isAllowed("https://lookaside.fbsbx.com/ig/media/asset.jpg"))
+    }
+
+    func test_allowsExactFacebookHost() {
+        // サブドメイン無しの完全一致ホストも許可されること。
+        XCTAssertTrue(isAllowed("https://facebook.com/oauth/dialog"))
+    }
+
+    func test_allowsBareInstagramRoot() {
+        // `www` の無い裸の `instagram.com` ルートも、リダイレクト通過のため許可されること。
+        XCTAssertTrue(isAllowed("https://instagram.com/"))
+    }
+
+    // MARK: - 追加で許可されるべきパス（allowedPaths の網羅）
+
+    func test_allowsOauthPath() {
+        XCTAssertTrue(isAllowed("https://www.instagram.com/oauth/authorize"))
+    }
+
+    func test_allowsAccountsOnetapPath() {
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/onetap/"))
+    }
+
+    func test_allowsAccountsEmailSignupPath() {
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/emailsignup/"))
+    }
+
+    func test_allowsApiV1OnWww() {
+        // `/api/v1` は i.instagram.com 以外（www）でも許可パスとして通過すること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/api/v1/users/web_profile_info/"))
+    }
+
+    func test_allowsDirectWithoutTrailingSlash() {
+        // 末尾スラッシュ無しの完全一致 `/direct` も許可されること（path == target）。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/direct"))
+    }
+
+    // MARK: - パスの細粒度な拒否（allowlist 外の /accounts/* は通さない）
+
+    func test_rejectsAccountsSettingsPath() {
+        // `/accounts/login` 等は許可されるが、許可リストに無い `/accounts/settings` は拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/settings/"))
+    }
+
+    func test_rejectsAccountsPrefixOnly() {
+        // `/accounts` 単体は、いずれの許可パス（/accounts/login など）とも一致しないため拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts"))
+    }
+
+    // MARK: - クエリ・フラグメントが許可判定に影響しないこと
+
+    func test_allowsDirectWithQueryString() {
+        // `url.path` はクエリを含まないため、`?next=...` が付いても許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/direct/inbox/?next=foo"))
+    }
+
+    func test_allowsDirectWithFragment() {
+        // フラグメントも `url.path` に含まれないため、許可判定に影響しないこと。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/direct/inbox/#thread-1"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
