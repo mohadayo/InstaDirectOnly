@@ -213,11 +213,21 @@ struct InstagramWebView: UIViewRepresentable {
             parent.loadError = error.localizedDescription
         }
 
-        /// フィードや不要なUIを隠すCSSを注入
+        /// フィードや不要なUIを隠すCSSを注入。
+        /// `didFinish` は同一 document の SPA 的な遷移ごとに発火するため、
+        /// 単純に `<style>` を append すると DOM に同じ要素が累積する。
+        /// 固定 ID を付け、既に存在する場合は再注入をスキップする
+        /// （フルリロード後は document が作り直されて ID も消えるため、
+        /// 必要なタイミングでは正しく再注入される）。
         private func injectCSS(into webView: WKWebView) {
             let js = """
             (function() {
+                var STYLE_ID = 'idoa-injected-style';
+                if (document.getElementById(STYLE_ID)) {
+                    return;
+                }
                 var style = document.createElement('style');
+                style.id = STYLE_ID;
                 style.textContent = `
                     /* 下部ナビゲーションバーを非表示 */
                     div[role="tablist"],
