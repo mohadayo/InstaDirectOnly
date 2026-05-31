@@ -93,18 +93,19 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 
 DM への遷移を URL ポリシーでガードする一方、DM 画面そのものに表示される「DM 以外への導線」は CSS で視覚的に隠します。実装上のポイントは次の通りです。
 
-- **実行タイミング**: ページのロード完了（`WKNavigationDelegate` の `didFinish`）ごとに `evaluateJavaScript` で `<style>` 要素を `document.head` に追加します。画面遷移のたびに再注入されるため、SPA 的な遷移後でも反映されます。
+- **実行タイミング**: `WKUserScript(.atDocumentStart)` で `WKUserContentController` に登録した JS が、ドキュメント生成直後（初回レイアウト前）に `<style>` 要素を `document.head`（無ければ `document.documentElement`）へ追加します。これにより、フィードナビゲーションバー・アプリ誘導バナーは最初から非表示の状態で描画されます。
+- **SPA 遷移のフォールバック**: Instagram は History API による soft navigation を多用するため、document が再生成されず `.atDocumentStart` が再発火しない場合があります。`WKNavigationDelegate.didFinish` でも同じ JS を `evaluateJavaScript` で再実行し、SPA 遷移後にも反映されるようにします。注入する JS は固定 ID (`idoa-injected-style`) で重複追加を防ぐため、同一 document への二重注入は安全に no-op になります。
 - **隠す対象**: 以下を `display: none !important` で非表示にします。
   - 下部のナビゲーション（タブ）バー: `div[role="tablist"]`、および「ホーム（`href="/"`）へのリンクを持ち DM リンクを含まない」`nav` 要素
   - アプリ誘導バナー: クラス名に `banner` / `Banner` を含む要素、App Store（`app-store` / `itunes.apple.com`）へのリンクを含む要素
 - **制約**: あくまで Instagram モバイル Web 版の現行 DOM 構造・クラス名に依存したセレクタです。Instagram 側のマークアップ変更により、隠しきれない要素が現れたり、逆に意図しない要素が隠れたりする可能性があります。これは URL ポリシーのような「ブロック」ではなく、視覚的な整理であることに注意してください（遷移自体は URL ポリシーで別途防いでいます）。
 
-セレクタの定義は `InstagramWebView.swift` の `injectCSS(into:)` にまとまっています。
+CSS 本体は `InstagramWebView.swift` の `hideUnwantedUICSS` 定数、注入用 JS は `injectStyleJS` 定数にまとまっています。
 
 ## トラブルシューティング（FAQ）
 
 - **DM 以外の UI（タブバーやバナー）が一瞬／一部表示される**
-  CSS 注入はロード完了後に行うため、描画タイミングによっては一瞬見えることがあります。また上記「制約」の通り、Instagram の DOM 変更でセレクタが追従できていない場合は隠れないことがあります。いずれも遷移そのものは URL ポリシーでブロックされるため、DM 以外の画面へ実際に移動することはありません。
+  CSS は `WKUserScript(.atDocumentStart)` でドキュメント生成直後に注入されるため、初回レイアウト前にルールが適用されます。とはいえ Instagram 側のレンダリング戦略（クライアントサイドで動的生成されるツリー等）によっては、ごく短時間だけ要素が見える場合があります。また上記「制約」の通り、Instagram の DOM 変更でセレクタが追従できていない場合は隠れないことがあります。いずれも遷移そのものは URL ポリシーでブロックされるため、DM 以外の画面へ実際に移動することはありません。
 
 - **タップしても何も起こらない／DM 画面に戻される**
   許可リスト外の URL（フィード・発見タブ・ショッピング等）は仕様としてブロックしています。初期ロード完了後であれば自動的に DM 画面へ戻ります。詳細は「URL ポリシー」を参照してください。
