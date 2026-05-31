@@ -32,11 +32,58 @@ struct InstagramWebView: UIViewRepresentable {
         "fbsbx.com",
     ]
 
+    /// DM 以外の UI（フィードナビゲーション・アプリ誘導バナー等）を視覚的に隠す CSS。
+    /// `WKUserScript(.atDocumentStart)` と `didFinish` 後の `evaluateJavaScript` の
+    /// 両方から参照されるため、ここで一元定義する。
+    static let hideUnwantedUICSS: String = """
+    /* 下部ナビゲーションバーを非表示 */
+    div[role="tablist"],
+    nav:has(a[href="/"]):not(:has(a[href*="direct"])) {
+        display: none !important;
+    }
+    /* アプリ誘導バナーを非表示 */
+    div[class*="banner"],
+    div[class*="Banner"],
+    a[href*="app-store"],
+    div:has(> a[href*="itunes.apple.com"]) {
+        display: none !important;
+    }
+    """
+
+    /// CSS を `<style id="idoa-injected-style">` として `document.head` に挿入する JS。
+    /// 同一 ID の `<style>` が既に存在する場合は何もしない（SPA 遷移ごとの重複追加防止）。
+    /// `WKUserScript(.atDocumentStart)` と `evaluateJavaScript` の両方から実行できる。
+    static let injectStyleJS: String = """
+    (function() {
+        var STYLE_ID = 'idoa-injected-style';
+        if (document.getElementById(STYLE_ID)) {
+            return;
+        }
+        var style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.textContent = `\(Self.hideUnwantedUICSS)`;
+        (document.head || document.documentElement).appendChild(style);
+    })();
+    """
+
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // Cookieを永続化してログイン状態を維持
         config.websiteDataStore = .default()
         config.allowsInlineMediaPlayback = true
+
+        // DM 以外の UI を視覚的に隠す CSS をドキュメント生成直後に注入する。
+        // `didFinish` 後の `evaluateJavaScript` だけだと初期レンダリング後にスタイルが
+        // 適用され、フィードバーやバナーが一瞬見える（FOUC）。`.atDocumentStart` で
+        // ユーザースクリプトとして登録することで、初回レイアウトより前に適用される。
+        let userContentController = WKUserContentController()
+        let userScript = WKUserScript(
+            source: Self.injectStyleJS,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        userContentController.addUserScript(userScript)
+        config.userContentController = userContentController
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -213,39 +260,13 @@ struct InstagramWebView: UIViewRepresentable {
             parent.loadError = error.localizedDescription
         }
 
-        /// フィードや不要なUIを隠すCSSを注入。
-        /// `didFinish` は同一 document の SPA 的な遷移ごとに発火するため、
-        /// 単純に `<style>` を append すると DOM に同じ要素が累積する。
-        /// 固定 ID を付け、既に存在する場合は再注入をスキップする
-        /// （フルリロード後は document が作り直されて ID も消えるため、
-        /// 必要なタイミングでは正しく再注入される）。
+        /// SPA 的な soft navigation（History API による遷移）では document が
+        /// 再生成されず `WKUserScript(.atDocumentStart)` が再発火しないため、
+        /// `didFinish` のタイミングでも CSS の冪等な再注入を行う。
+        /// `injectStyleJS` 自身が固定 ID で重複追加を防いでいるため、フル
+        /// ロード後の二重注入も安全（既存 `<style>` が見つかれば早期 return）。
         private func injectCSS(into webView: WKWebView) {
-            let js = """
-            (function() {
-                var STYLE_ID = 'idoa-injected-style';
-                if (document.getElementById(STYLE_ID)) {
-                    return;
-                }
-                var style = document.createElement('style');
-                style.id = STYLE_ID;
-                style.textContent = `
-                    /* 下部ナビゲーションバーを非表示 */
-                    div[role="tablist"],
-                    nav:has(a[href="/"]):not(:has(a[href*="direct"])) {
-                        display: none !important;
-                    }
-                    /* アプリ誘導バナーを非表示 */
-                    div[class*="banner"],
-                    div[class*="Banner"],
-                    a[href*="app-store"],
-                    div:has(> a[href*="itunes.apple.com"]) {
-                        display: none !important;
-                    }
-                `;
-                document.head.appendChild(style);
-            })();
-            """
-            webView.evaluateJavaScript(js)
+            webView.evaluateJavaScript(InstagramWebView.injectStyleJS)
         }
     }
 }
