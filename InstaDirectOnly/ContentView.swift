@@ -20,6 +20,7 @@ struct ContentView: View {
                 ProgressView()
                     .tint(.white)
                     .scaleEffect(1.5)
+                    .accessibilityLabel("読み込み中")
             }
 
             if let message = loadError {
@@ -29,11 +30,18 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
     }
 
+    /// 再試行処理。
+    /// 既に何らかの URL がロード済みなら `webView.reload()` で現在のページを再試行する
+    /// （個別 DM スレッド閲覧中のネットワーク失敗から、同じスレッドに戻れるようにするため）。
+    /// 初回ロードが URL コミット前に失敗した場合（`webView.url == nil`）に限り、
+    /// フォールバックとして DM 受信箱 (`dmURL`) をロードする。
     private func reload() {
         loadError = nil
-        let request = URLRequest(url: InstagramWebView.dmURL)
-        if let wv = webView?.webView {
-            wv.load(request)
+        guard let wv = webView?.webView else { return }
+        if wv.url != nil {
+            wv.reload()
+        } else {
+            wv.load(URLRequest(url: InstagramWebView.dmURL))
         }
     }
 }
@@ -47,6 +55,7 @@ private struct ErrorOverlay: View {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 48))
                 .foregroundStyle(.white)
+                .accessibilityHidden(true)
             Text("読み込みに失敗しました")
                 .font(.headline)
                 .foregroundStyle(.white)
@@ -64,9 +73,13 @@ private struct ErrorOverlay: View {
                     .foregroundStyle(Color.black)
                     .clipShape(Capsule())
             }
+            .accessibilityLabel("再試行")
+            .accessibilityHint("読み込みに失敗したページを再度読み込みます")
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.85))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("読み込みに失敗しました")
     }
 }
