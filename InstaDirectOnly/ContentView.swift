@@ -4,6 +4,9 @@ struct ContentView: View {
     @State private var isLoading = true
     @State private var webView: WebViewRef?
     @State private var loadError: String?
+    /// WKWebView.estimatedProgress を 0.0〜1.0 で受け取る。
+    /// 上部の薄いプログレスバー描画に使用。
+    @State private var loadProgress: Double = 0.0
 
     var body: some View {
         ZStack {
@@ -12,9 +15,25 @@ struct ContentView: View {
             InstagramWebView(
                 isLoading: $isLoading,
                 webViewRef: $webView,
-                loadError: $loadError
+                loadError: $loadError,
+                loadProgress: $loadProgress
             )
             .ignoresSafeArea()
+
+            // 画面最上部に薄いラインで読み込み進捗を表示する。
+            // isLoading（ナビゲーションが始まってから完了するまで）かつ、
+            // 完了直前 (>= 1.0) では表示しないことで、完了タイミングで瞬間的に消える。
+            VStack(spacing: 0) {
+                if isLoading && loadProgress < 1.0 {
+                    ProgressView(value: loadProgress)
+                        .progressViewStyle(.linear)
+                        .tint(.white)
+                        .frame(height: 2)
+                        .accessibilityHidden(true)
+                }
+                Spacer()
+            }
+            .ignoresSafeArea(.container, edges: .horizontal)
 
             if isLoading {
                 ProgressView()
