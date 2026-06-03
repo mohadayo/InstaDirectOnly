@@ -10,6 +10,9 @@ struct InstagramWebView: UIViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var webViewRef: WebViewRef?
     @Binding var loadError: String?
+    /// `WKWebView.estimatedProgress` を 0.0〜1.0 で反映する。
+    /// SwiftUI 側で上部の薄いプログレスバーを描画するために使う。
+    @Binding var loadProgress: Double
 
     static let dmURL = URL(string: "https://www.instagram.com/direct/inbox/")!
 
@@ -100,6 +103,11 @@ struct InstagramWebView: UIViewRepresentable {
 
         webView.load(URLRequest(url: Self.dmURL))
 
+        // 読み込み進捗 (estimatedProgress) を KVO で観測し、@Binding 経由で UI に反映する。
+        // 観測は Coordinator が保持する `progressObservation` トークンで管理され、
+        // Coordinator の解放（= UIViewRepresentable の解体）と同時に invalidate される。
+        context.coordinator.startObservingProgress(of: webView)
+
         DispatchQueue.main.async {
             let ref = WebViewRef()
             ref.webView = webView
@@ -170,9 +178,36 @@ struct InstagramWebView: UIViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let parent: InstagramWebView
         private var hasCompletedInitialLoad = false
+        /// `WKWebView.estimatedProgress` の KVO 観測トークン。
+        /// `deinit` で必ず `invalidate()` する（Coordinator 寿命より長い WebView は無いが、
+        /// SwiftUI 再生成時の二重観測を防ぐためにも明示的に解放する）。
+        private var progressObservation: NSKeyValueObservation?
 
         init(_ parent: InstagramWebView) {
             self.parent = parent
+        }
+
+        deinit {
+            progressObservation?.invalidate()
+        }
+
+        /// `webView.estimatedProgress` を KVO で観測し、メインスレッドで `loadProgress` を更新する。
+        /// `options: [.new, .initial]` で初期値も流すことで、UI のラグを最小化する。
+        func startObservingProgress(of webView: WKWebView) {
+            progressObservation?.invalidate()
+            progressObservation = webView.observe(
+                \.estimatedProgress,
+                options: [.new, .initial]
+            ) { [weak self] webView, _ in
+                let value = webView.estimatedProgress
+                if Thread.isMainThread {
+                    self?.parent.loadProgress = value
+                } else {
+                    DispatchQueue.main.async {
+                        self?.parent.loadProgress = value
+                    }
+                }
+            }
         }
 
         func webView(

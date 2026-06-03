@@ -89,6 +89,14 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 
 `WKNavigationDelegate` の失敗コールバックでエラーメッセージを SwiftUI 側にバインドし、半透明オーバーレイとして表示します。`NSURLErrorCancelled`（許可外 URL ブロックや戻る操作によるキャンセル）はエラーとして扱いません。
 
+### 読み込み進捗の表示
+
+画面最上部に、`WKWebView.estimatedProgress`（0.0〜1.0）を反映する **薄いリニアプログレスバー** を表示します。Safari の URL バー下に出るような細い進捗バーで、「いつ終わりそうか」がひと目で分かるようにするための UX 改善です。
+
+- 進捗観測は `Coordinator` が `NSKeyValueObservation` で `webView.estimatedProgress` を監視し、メインスレッドで `@Binding var loadProgress` を更新します。観測トークンは `Coordinator.deinit` で必ず `invalidate()` されます。
+- バーは `isLoading && loadProgress < 1.0` の間だけ表示し、ロード完了の瞬間に消えます。
+- 中央の不確定スピナーは初回ロードの存在感を保つためそのまま併用しています。
+
 ### 再試行ボタンの挙動
 
 エラーオーバーレイの「再試行」ボタンは、ユーザーが閲覧していた位置をできるだけ保つように動作します。
