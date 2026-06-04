@@ -221,6 +221,87 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertTrue(isAllowed("https://www.instagram.com/direct/inbox/#thread-1"))
     }
 
+    // MARK: - IP リテラル / IDN / 空ホストなどの追加エッジケース
+
+    func test_rejectsIPv4LiteralHost() {
+        // `127.0.0.1` のような IPv4 リテラルは allowlist のどのホストにも一致しないこと。
+        // (`hasSuffix(".instagram.com")` でも `host == "instagram.com"` でもない)
+        XCTAssertFalse(isAllowed("http://127.0.0.1/direct/inbox/"))
+    }
+
+    func test_rejectsIPv4LiteralWithHttpsAndAllowedPath() {
+        // HTTPS + 許可パスの組み合わせでも、IPv4 リテラルは拒否されること。
+        XCTAssertFalse(isAllowed("https://192.0.2.1/direct/"))
+    }
+
+    func test_rejectsIPv6LiteralHost() {
+        // `[::1]` のような IPv6 リテラルは `URL.host` が `::1` を返す（角括弧無し）。
+        // 既知ドメイン名と一致しないことを確認する。
+        XCTAssertFalse(isAllowedOrUnparseable("http://[::1]/direct/inbox/"))
+    }
+
+    func test_rejectsIPv6LiteralLoopbackHttps() {
+        XCTAssertFalse(isAllowedOrUnparseable("https://[::1]/direct/"))
+    }
+
+    func test_rejectsPunycodeLookalikeHost() {
+        // `xn--nstagram-3yc.com` は `іnstagram.com` (i がキリル文字) の Punycode 形式。
+        // `URL.host` は Punycode 文字列をそのまま返すため、`instagram.com` の
+        // サブドメインとは判定されないこと。
+        XCTAssertFalse(isAllowed("https://www.xn--nstagram-3yc.com/direct/inbox/"))
+    }
+
+    func test_rejectsPunycodeOnlyDomainSuffix() {
+        // Punycode 形式の TLD lookalike も拒否されること。
+        XCTAssertFalse(isAllowed("https://instagram.xn--com-ip6f/direct/inbox/"))
+    }
+
+    func test_rejectsEmptyPathOnNonAllowedHost() {
+        // 許可外ホスト + 空パスは拒否されること（パスベース許可は instagram.com のみ）。
+        XCTAssertFalse(isAllowed("https://example.com/"))
+    }
+
+    func test_rejectsApiParentPath() {
+        // `/api` 単体は `/api/v1` の親パスなので、`pathMatches` の境界として拒否されるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/api"))
+    }
+
+    func test_rejectsApiV1ParentWithoutSubpath() {
+        // `/api/v2` は `/api/v1` の prefix 一致でも path 一致でも無いため拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/api/v2/users/"))
+    }
+
+    func test_rejectsChallengesPluralLookalike() {
+        // `/challenges` は `/challenge` の prefix での誤許可が発生しないこと。
+        // `pathMatches` は `target + "/"` か完全一致のみ許可するため、これは拒否される。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/challenges/recovery"))
+    }
+
+    func test_rejectsOauthLookalike() {
+        // `/oauthx` のような prefix 取りこぼしも防がれること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/oauthx/authorize"))
+    }
+
+    func test_allowsDirectWithTrailingSlashExact() {
+        // 末尾スラッシュ付き `/direct/` は `target + "/"` 始まりとして許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/direct/"))
+    }
+
+    func test_allowsOauthBareWithoutSlash() {
+        // `/oauth` 完全一致は許可されるべき（path == target）。回帰確認。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/oauth"))
+    }
+
+    func test_rejectsCdnSubstringLookalikeHost() {
+        // `cdninstagram.com` の部分文字列を含むだけのホストは拒否されること。
+        XCTAssertFalse(isAllowed("https://evil-cdninstagram.com/asset.jpg"))
+    }
+
+    func test_rejectsFbcdnSubstringLookalikeHost() {
+        // `fbcdn.net` の suffix lookalike も拒否されること。
+        XCTAssertFalse(isAllowed("https://evilfbcdn.net/asset.jpg"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
