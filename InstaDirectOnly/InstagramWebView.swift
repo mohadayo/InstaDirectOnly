@@ -229,9 +229,18 @@ struct InstagramWebView: UIViewRepresentable {
             if InstagramWebView.isAllowedURL(url) {
                 decisionHandler(.allow)
             } else {
-                // ブロック対象のURL → DM画面にリダイレクト
+                // ブロック対象のURL → ナビゲーション自体をキャンセル。
+                // この時点で `WKWebView` は元のページのまま動かないので、
+                // 既に許可済みページ（DM スレッド・ログイン・oauth 等）にいる場合は
+                // その場に留まり、閲覧位置（例: /direct/t/<id>/）を保持する。
+                // 何らかの事情で許可外ページに到達してしまっている場合のみ、
+                // 保険として DM 受信箱へリダイレクトする。
                 decisionHandler(.cancel)
                 if hasCompletedInitialLoad {
+                    if let currentURL = webView.url,
+                       InstagramWebView.isAllowedURL(currentURL) {
+                        return
+                    }
                     webView.load(URLRequest(url: InstagramWebView.dmURL))
                 }
             }
