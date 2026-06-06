@@ -302,6 +302,68 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowed("https://evilfbcdn.net/asset.jpg"))
     }
 
+    // MARK: - スキームの大文字小文字正規化
+
+    func test_allowsUppercaseScheme() {
+        // 実装は `url.scheme?.lowercased()` で正規化してから allowlist と照合するため、
+        // `HTTPS://` のような全大文字スキームも http/https と等価に扱われ許可される。
+        XCTAssertTrue(isAllowed("HTTPS://www.instagram.com/direct/inbox/"))
+    }
+
+    func test_allowsMixedCaseScheme() {
+        // 大文字小文字混在のスキームも正規化後に許可されること（回帰）。
+        XCTAssertTrue(isAllowed("HtTpS://www.instagram.com/direct/inbox/"))
+    }
+
+    // MARK: - allowlist で拒否されるべき特殊スキーム
+
+    func test_rejectsAboutBlankFromAllowlist() {
+        // `about:blank` は WKNavigationDelegate 側 (`decidePolicyFor`) で別途許可されるが、
+        // 純粋な静的判定の `isAllowedURL` は scheme allowlist (http/https のみ) を満たさず false を返す。
+        // 役割分担（allowlist と delegate のガード）の境界をテストとして残す。
+        XCTAssertFalse(isAllowedOrUnparseable("about:blank"))
+    }
+
+    func test_rejectsInstagramCustomScheme() {
+        // Instagram ネイティブアプリ用カスタム URL スキーム (`instagram://`) は
+        // Web から開かれても allowlist 外。アプリ外への離脱導線を作らない設計上の意図を回帰する。
+        XCTAssertFalse(isAllowedOrUnparseable("instagram://user?username=evil"))
+    }
+
+    func test_rejectsIntentScheme() {
+        // Android スタイルの intent:// は iOS でも JS 経由で生成されうる。
+        // scheme allowlist で弾かれ、ホスト位置に `www.instagram.com` を埋め込んでも通らない。
+        XCTAssertFalse(
+            isAllowedOrUnparseable(
+                "intent://www.instagram.com/direct/#Intent;scheme=https;package=com.instagram.android;end"
+            )
+        )
+    }
+
+    func test_rejectsChromeScheme() {
+        // ブラウザ専用スキーム (`chrome://`) も scheme allowlist で弾かれる。
+        XCTAssertFalse(isAllowedOrUnparseable("chrome://flags/"))
+    }
+
+    // MARK: - ホスト末尾ドット
+
+    func test_rejectsTrailingDotHost() {
+        // DNS 上 `instagram.com.` (末尾ドット) は有効な FQDN だが、
+        // `URL.host` は文字列として "instagram.com." を返し、`hasSuffix(".instagram.com")` も
+        // `host == "instagram.com"` も満たさないため allowlist を満たさない。
+        // 正規化を一切行わない実装の意図を回帰する。
+        XCTAssertFalse(isAllowed("https://instagram.com./direct/inbox/"))
+    }
+
+    // MARK: - 極端に長い path
+
+    func test_allowsVeryLongDirectThreadPath() {
+        // `/direct/t/<thread_id>` は実用上 24 文字程度の base32 ID が入るが、
+        // 万一上流の URL 仕様が変わって極端に長い ID が来ても prefix 一致で通過すること。
+        let longID = String(repeating: "a", count: 1024)
+        XCTAssertTrue(isAllowed("https://www.instagram.com/direct/t/\(longID)"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
