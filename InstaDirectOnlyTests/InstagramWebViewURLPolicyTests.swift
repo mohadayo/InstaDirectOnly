@@ -187,6 +187,29 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/emailsignup/"))
     }
 
+    func test_allowsAccountsLogoutPath() {
+        // ログアウト導線（完全一致）が通過すること。
+        // allowlist に `/accounts/logout` を追加した目的そのものを回帰する。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/logout"))
+    }
+
+    func test_allowsAccountsLogoutTrailingSlash() {
+        // 末尾スラッシュ付き `/accounts/logout/` も許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/logout/"))
+    }
+
+    func test_allowsAccountsLogoutAjaxSubpath() {
+        // ログアウトの実行は `/accounts/logout/ajax/` への POST で行われる。
+        // `pathMatches(target + "/")` により、サブパスも一括で許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/logout/ajax/"))
+    }
+
+    func test_rejectsAccountsLogoutallLookalike() {
+        // `/accounts/logoutall` のような prefix lookalike は
+        // セグメント境界を意識した `pathMatches` により拒否されること（回帰）。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/logoutall"))
+    }
+
     func test_allowsApiV1OnWww() {
         // `/api/v1` は i.instagram.com 以外（www）でも許可パスとして通過すること。
         XCTAssertTrue(isAllowed("https://www.instagram.com/api/v1/users/web_profile_info/"))
