@@ -22,6 +22,11 @@ struct InstagramWebView: UIViewRepresentable {
         "/accounts/login",
         "/accounts/onetap",
         "/accounts/emailsignup",
+        // ユーザーがアプリ内からログアウトできるようにする。
+        // `pathMatches` の意味論により、完全一致 `/accounts/logout` と
+        // サブパス `/accounts/logout/ajax/`（ログアウト POST 用）の両方が通過する。
+        // 一方 `/accounts/logoutall` のような prefix lookalike は引き続き拒否される。
+        "/accounts/logout",
         "/challenge",
         "/api/v1",
         "/oauth",
