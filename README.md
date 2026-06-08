@@ -70,6 +70,7 @@ Instagram ドメイン内で許可されるパス（**完全一致もしくは `
 - `/direct`, `/direct/*`（DM）
 - `/accounts/login`, `/accounts/onetap`, `/accounts/emailsignup`（ログイン）
 - `/accounts/logout`, `/accounts/logout/*`（ログアウト導線・`/accounts/logout/ajax/` 等の POST も含む）
+- `/accounts/password/reset`, `/accounts/password/reset/*`（「パスワードを忘れた」からの再設定フロー。メール内リンクの `confirm/...` も通過）
 - `/challenge`, `/challenge/*`（本人確認）
 - `/api/v1`, `/api/v1/*`, `/oauth`, `/oauth/*`（内部 API）
 - `/`（リダイレクト中継）

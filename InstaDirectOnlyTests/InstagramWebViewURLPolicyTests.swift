@@ -210,6 +210,46 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/logoutall"))
     }
 
+    // MARK: - パスワード再設定フロー（/accounts/password/reset）
+
+    func test_allowsAccountsPasswordResetExact() {
+        // 完全一致 `/accounts/password/reset` が通過すること。
+        // ログイン画面の「パスワードを忘れた」リンク先を許可するための回帰。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/password/reset"))
+    }
+
+    func test_allowsAccountsPasswordResetTrailingSlash() {
+        // 末尾スラッシュ付き `/accounts/password/reset/` も許可されること。
+        XCTAssertTrue(isAllowed("https://www.instagram.com/accounts/password/reset/"))
+    }
+
+    func test_allowsAccountsPasswordResetConfirmSubpath() {
+        // `/accounts/password/reset/confirm/...` のようなサブパス（メール内のリンク先）も、
+        // `pathMatches(target + "/")` により一括で許可されること。
+        XCTAssertTrue(
+            isAllowed("https://www.instagram.com/accounts/password/reset/confirm/abc/")
+        )
+    }
+
+    func test_rejectsAccountsPasswordChangePath() {
+        // 設定画面側のパスワード変更 `/accounts/password/change/` は DM 用途のスコープ外。
+        // `pathMatches` のセグメント境界一致により、`/accounts/password/reset` の prefix とも
+        // 異なるため拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/password/change/"))
+    }
+
+    func test_rejectsAccountsPasswordParentPath() {
+        // 親パス `/accounts/password` 単体は、`/accounts/password/reset` とは
+        // 完全一致でもセグメント境界 prefix でもないため拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/password"))
+    }
+
+    func test_rejectsAccountsPasswordResetLookalike() {
+        // `/accounts/password/resetx` のような prefix lookalike も拒否されること。
+        // 既存の `pathMatches` 境界判定（`target` か `target/`）の回帰。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/password/resetx"))
+    }
+
     func test_allowsApiV1OnWww() {
         // `/api/v1` は i.instagram.com 以外（www）でも許可パスとして通過すること。
         XCTAssertTrue(isAllowed("https://www.instagram.com/api/v1/users/web_profile_info/"))

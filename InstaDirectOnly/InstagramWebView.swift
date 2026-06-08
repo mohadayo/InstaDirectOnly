@@ -27,6 +27,12 @@ struct InstagramWebView: UIViewRepresentable {
         // サブパス `/accounts/logout/ajax/`（ログアウト POST 用）の両方が通過する。
         // 一方 `/accounts/logoutall` のような prefix lookalike は引き続き拒否される。
         "/accounts/logout",
+        // ログイン画面から「パスワードを忘れた」を辿った際の再設定フロー。
+        // `pathMatches` のセグメント境界一致により、`/accounts/password/reset`、
+        // `/accounts/password/reset/`、`/accounts/password/reset/confirm/` 等を通過させる。
+        // 一方 `/accounts/password/change/`（設定画面側）や `/accounts/password` 単体は
+        // 親パスとして拒否されるため、DM 用途以外の導線は開かない。
+        "/accounts/password/reset",
         "/challenge",
         "/api/v1",
         "/oauth",
