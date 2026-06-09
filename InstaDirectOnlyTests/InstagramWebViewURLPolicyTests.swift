@@ -427,6 +427,61 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertTrue(isAllowed("https://www.instagram.com/direct/t/\(longID)"))
     }
 
+    // MARK: - メインタブ・プロフィールページの明示的な拒否
+
+    func test_rejectsPostDetailPath() {
+        // 投稿 (Post) 詳細 `/p/<shortcode>/` は DM 用途外。
+        // 許可リストに含まれないため `pathMatches` のいずれの target にも一致せず拒否される。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/p/C1abcdEF234/"))
+    }
+
+    func test_rejectsBarePathP() {
+        // `/p` 単体（末尾スラッシュ無し）も `/p/<shortcode>` の親パスとして拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/p"))
+    }
+
+    func test_rejectsReelDetailPath() {
+        // 単発リール詳細 `/reel/<shortcode>/` は DM 用途外。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/reel/C1abcdEF234/"))
+    }
+
+    func test_rejectsReelsTabPath() {
+        // リールタブ `/reels/` も拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/reels/"))
+    }
+
+    func test_rejectsStoriesViewPath() {
+        // ストーリービュー `/stories/<user>/` も DM 用途外。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/stories/some_user/"))
+    }
+
+    func test_rejectsShopPath() {
+        // ショッピングタブ `/shop/` も DM 用途外。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/shop/"))
+    }
+
+    func test_rejectsBareExplorePath() {
+        // `/explore` 単体（末尾スラッシュ無し）も `/explore/` の親パスとして拒否されること。
+        // 既存の `/explore/` 拒否テストの末尾スラッシュ違いを補完する。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/explore"))
+    }
+
+    func test_rejectsUserProfilePath() {
+        // 任意のユーザー名 `/<username>/` プロフィールページは DM 用途外。
+        // 許可リストには無いため `pathMatches` 境界判定で確実に拒否される。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/some_user/"))
+    }
+
+    func test_rejectsUserProfilePathWithoutTrailingSlash() {
+        // 末尾スラッシュ無しの `/<username>` も同様に拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/some_user"))
+    }
+
+    func test_rejectsUserProfileSubpathTagged() {
+        // `/<username>/tagged/` のようなサブパスも拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/some_user/tagged/"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
