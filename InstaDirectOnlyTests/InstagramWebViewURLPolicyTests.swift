@@ -482,6 +482,58 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowed("https://www.instagram.com/some_user/tagged/"))
     }
 
+    // MARK: - パストラバーサル（`..` / `.` セグメント）の拒否
+
+    func test_rejectsDirectParentTraversalToExplore() {
+        // `/direct/../explore/` は prefix だけ見ると `/direct/` で始まるが、
+        // ブラウザ側で解決されるとフィードに準ずる `/explore/` へ到達してしまう。
+        // `hasPathTraversal` ガードで明示的に拒否する。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/../explore/"))
+    }
+
+    func test_rejectsDirectDoubleParentTraversalToFeed() {
+        // `/direct/inbox/../../` のような多段 `..` も拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/inbox/../../"))
+    }
+
+    func test_rejectsAccountsLoginTraversalToPost() {
+        // ログイン経由 → 投稿詳細への traversal も拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/accounts/login/../../p/abcdef/"))
+    }
+
+    func test_rejectsTraversalToUnknownHostPath() {
+        // 末尾が allowlist 外でも、`..` を含む時点で拒否されること
+        // （allowlist の前段で deny される確認）。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/../../foo/"))
+    }
+
+    func test_rejectsCurrentDirSegmentInDirectPath() {
+        // `.` セグメント単体も拒否されること。
+        // `/direct/./inbox/` は実質 `/direct/inbox/` だが、トラバーサル系の
+        // 入力を一律にブロックする deny-by-default の方針を取る。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/./inbox/"))
+    }
+
+    func test_rejectsTraversalAtPathTail() {
+        // 末尾の `..` も拒否されること。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/inbox/.."))
+    }
+
+    func test_allowsDoubleDotInsideSegmentName() {
+        // パスセグメントの内部に `..` が含まれるだけ（独立した `..` セグメントではない）の
+        // 場合はトラバーサルではないため、通常の allowlist 判定にゆだねる。
+        // ここでは `direct..foo` という単独セグメントになるので、`/direct` への
+        // prefix 一致を満たさず最終的に拒否される。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct..foo/"))
+    }
+
+    func test_rejectsTraversalOnAllowedCDNHostStaysAllowed() {
+        // 許可ホスト（CDN）はパス判定をスキップする設計のため、`..` を含んでも
+        // ホスト一致だけで許可される。本テストは「ホスト allowlist が path に
+        // 関係なく許可する」という現行仕様を明示的に文書化するためのもの。
+        XCTAssertTrue(isAllowed("https://scontent.cdninstagram.com/v/asset/../other.jpg"))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
