@@ -150,6 +150,21 @@ struct InstagramWebView: UIViewRepresentable {
         return path == target || path.hasPrefix(target + "/")
     }
 
+    /// path が `..` あるいは `.` をセグメントとして含む（パストラバーサル）かを判定する。
+    /// Foundation の `URL.path` は `/direct/../explore/` のような入力をそのまま返すため、
+    /// `pathMatches` の prefix 検査だけだと「先頭が `/direct/` で始まる」という理由で
+    /// allowlist を素通りしてしまう。ブラウザ側でサーバ送信時にパスが解決されると、
+    /// 結果として `/explore/` 等の本来ブロックすべきパスに到達し得るので、
+    /// `.` / `..` セグメントを含むパスは早期に拒否する（deny-by-default）。
+    private static func hasPathTraversal(_ path: String) -> Bool {
+        for component in path.split(separator: "/", omittingEmptySubsequences: true) {
+            if component == ".." || component == "." {
+                return true
+            }
+        }
+        return false
+    }
+
     /// 許可する URL スキーム。`http` / `https` のみを通し、`javascript:` `data:`
     /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
     static let allowedSchemes: Set<String> = ["http", "https"]
@@ -174,6 +189,11 @@ struct InstagramWebView: UIViewRepresentable {
         // Instagramドメインの場合、パスで判定
         if Self.isHost(host, equalToOrSubdomainOf: "instagram.com") {
             let path = url.path.lowercased()
+            // `/direct/../explore/` のようなトラバーサル付きパスは
+            // prefix 一致では allowlist を素通りしてしまうため、ここで明示的に拒否する。
+            if Self.hasPathTraversal(path) {
+                return false
+            }
             // ルートパスは許可（リダイレクト中に通過する）
             if path == "/" || path.isEmpty {
                 return true
