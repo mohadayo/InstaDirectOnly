@@ -77,6 +77,17 @@ Instagram ドメイン内で許可されるパス（**完全一致もしくは `
 
 上記以外への遷移は WebView のレベルで `decisionHandler(.cancel)` され、初期ロード完了後であれば自動的に DM 画面へ戻ります。
 
+### パストラバーサルの拒否
+
+Foundation の `URL.path` は `/direct/../explore/` のような traversal セグメントを含むパスを **正規化せずそのまま返す** ため、prefix 一致だけだと「`/direct/` で始まる」という理由で allowlist を素通りしてしまいます。ブラウザ側でサーバ送信時にパスが解決されると `/explore/` 等の本来ブロックすべきページへ到達する恐れがあるため、`isAllowedURL` は Instagram ドメインのパスについて **`..` または `.` をセグメントとして含むパスを早期に拒否（deny-by-default）** します。具体的には以下のような URL がブロックされます：
+
+- `https://www.instagram.com/direct/../explore/`
+- `https://www.instagram.com/accounts/login/../../p/abcdef/`
+- `https://www.instagram.com/direct/./inbox/`
+- `https://www.instagram.com/direct/inbox/..`
+
+なお `direct..foo` のように単独セグメント内に `..` を含むだけのケースはトラバーサルではないため、通常の allowlist 判定（`/direct` への prefix 一致を満たさず最終的に拒否）にゆだねます。CDN/認証系の許可ホスト（`*.cdninstagram.com` 等）はパス検査をスキップする現行仕様のため、これらのホスト下の `..` は許容されます（パスは CDN 側の責務）。
+
 URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPolicyTests.swift` にユニットテストとして文書化しています（Xcode のテストターゲット追加が必要）。
 
 ## 新規ウィンドウ（target="_blank" / window.open）の扱い
