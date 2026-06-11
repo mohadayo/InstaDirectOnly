@@ -102,7 +102,13 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 
 ## エラーハンドリング
 
-`WKNavigationDelegate` の失敗コールバックでエラーメッセージを SwiftUI 側にバインドし、半透明オーバーレイとして表示します。`NSURLErrorCancelled`（許可外 URL ブロックや戻る操作によるキャンセル）はエラーとして扱いません。
+`WKNavigationDelegate` の失敗コールバックでエラーメッセージを SwiftUI 側にバインドし、半透明オーバーレイとして表示します。以下のエラーは「ユーザーの操作 / URL ポリシーに起因する正常系」なので、オーバーレイ表示の対象から除外しています（判定は `InstagramWebView.isIgnorableNavigationError(_:)` に集約）：
+
+- `NSURLErrorDomain` / `NSURLErrorCancelled` (-999) — 戻る操作や許可外 URL のブロックで発生する標準的なキャンセル
+- `WebKitErrorDomain` / `101` (`WebKitErrorCannotShowURL`) — 直後に `dmURL` への再ロードで上書きされるため UI 上は無害
+- `WebKitErrorDomain` / `102` (`WebKitErrorFrameLoadInterruptedByPolicyChange`) — `decidePolicyFor(.cancel)` 経路で `WKWebView` 自身が発火する中断系コード
+
+上記いずれにも当てはまらない通信失敗・TLS エラー等の本物のエラーは、引き続きオーバーレイで報告します。これにより、許可外 URL を踏んだ際に「読み込みに失敗しました」オーバーレイが一瞬表示されてしまうリグレッションを防いでいます。
 
 ### 読み込み進捗の表示
 
