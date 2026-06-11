@@ -169,6 +169,35 @@ struct InstagramWebView: UIViewRepresentable {
     /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
     static let allowedSchemes: Set<String> = ["http", "https"]
 
+    /// `WKWebView` が内部的に使う `WebKitErrorDomain` の文字列。Apple 公開ヘッダーには
+    /// シンボルが無いため、`(error as NSError).domain` との比較用にここに集約しておく。
+    static let webKitErrorDomain: String = "WebKitErrorDomain"
+
+    /// `decisionHandler(.cancel)` や許可外スキーム到達などで `WKWebView` 自身が
+    /// 発火する「無視して問題ないエラー」コード。`WebKitErrorDomain` 配下：
+    /// - `101`: `WebKitErrorCannotShowURL` — 直後に `dmURL` への再ロードで上書きされるので無害
+    /// - `102`: `WebKitErrorFrameLoadInterruptedByPolicyChange` — ポリシー判断による中断
+    static let ignorableWebKitErrorCodes: Set<Int> = [101, 102]
+
+    /// 「ユーザーへのエラー表示が不要なナビゲーションエラー」かを判定する。
+    /// 役割は 2 つ：
+    /// 1. `NSURLErrorDomain` / `NSURLErrorCancelled` — ユーザーによる戻る・許可外 URL ブロックなど
+    /// 2. `WebKitErrorDomain` の中断系コード — `decidePolicyFor(.cancel)` 経路で発生しうる
+    ///
+    /// 上記いずれにも当てはまらない、通信失敗や TLS エラー等の「本物のエラー」は
+    /// 引き続きエラーオーバーレイで報告する。
+    static func isIgnorableNavigationError(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return true
+        }
+        if nsError.domain == webKitErrorDomain
+            && ignorableWebKitErrorCodes.contains(nsError.code) {
+            return true
+        }
+        return false
+    }
+
     /// 指定URLがDM利用に必要かどうかを判定
     static func isAllowedURL(_ url: URL) -> Bool {
         // スキームの allowlist 検査を最初に行う。
@@ -324,12 +353,14 @@ struct InstagramWebView: UIViewRepresentable {
         }
 
         /// 共通のロード失敗処理。
-        /// 許可外URLのブロックやユーザ操作によるキャンセル (NSURLErrorCancelled) は
-        /// 「エラー」ではないので無視する。
+        /// 許可外URLのブロックやユーザ操作によるキャンセル (NSURLErrorCancelled)、
+        /// および `decidePolicyFor(.cancel)` 経路で WKWebView 自身が発火する
+        /// `WebKitErrorDomain` の中断系コード (101 / 102) は「エラー」ではないので無視する。
+        /// 判定本体は `InstagramWebView.isIgnorableNavigationError` に集約し、
+        /// テストから直接呼べる形にしている。
         private func handleNavigationError(_ error: Error) {
             parent.isLoading = false
-            let nsError = error as NSError
-            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            if InstagramWebView.isIgnorableNavigationError(error) {
                 return
             }
             parent.loadError = error.localizedDescription

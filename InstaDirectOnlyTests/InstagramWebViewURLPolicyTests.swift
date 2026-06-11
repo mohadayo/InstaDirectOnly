@@ -534,6 +534,60 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertTrue(isAllowed("https://scontent.cdninstagram.com/v/asset/../other.jpg"))
     }
 
+    // MARK: - ナビゲーションエラーの無視判定
+
+    func test_ignoresNSURLErrorCancelled() {
+        // 許可外 URL ブロックや戻る操作で発生する標準的なキャンセルエラーは無視されること。
+        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled)
+        XCTAssertTrue(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_ignoresWebKitErrorFrameLoadInterruptedByPolicyChange() {
+        // `decisionHandler(.cancel)` 経路で WKWebView が発火しうる
+        // `WebKitErrorDomain` / 102 (FrameLoadInterruptedByPolicyChange) は無視されること。
+        let error = NSError(domain: InstagramWebView.webKitErrorDomain, code: 102)
+        XCTAssertTrue(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_ignoresWebKitErrorCannotShowURL() {
+        // 許可外スキーム到達直後の再ロード時に発生しうる
+        // `WebKitErrorDomain` / 101 (CannotShowURL) も無視されること。
+        let error = NSError(domain: InstagramWebView.webKitErrorDomain, code: 101)
+        XCTAssertTrue(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_doesNotIgnoreNetworkConnectionError() {
+        // 通信失敗系は引き続きエラーオーバーレイで報告されること。
+        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)
+        XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_doesNotIgnoreSSLError() {
+        // TLS / 証明書エラーは利用者にとって有意な失敗なので報告されること。
+        let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorSecureConnectionFailed)
+        XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_doesNotIgnoreUnknownWebKitErrorCode() {
+        // `WebKitErrorDomain` でも未知のコードは無視しない（保守的に報告）。
+        // 既知の中断系 (101 / 102) 以外のコードは新たな失敗種別として扱う。
+        let error = NSError(domain: InstagramWebView.webKitErrorDomain, code: 300)
+        XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_doesNotIgnoreCancelledOnWrongDomain() {
+        // コード値が `NSURLErrorCancelled` と同じでも、ドメインが違えば無視しない
+        // （別ドメイン側で同じ数値が別の意味を持つ可能性があるため、組合せで判定）。
+        let error = NSError(domain: "com.example.OtherDomain", code: NSURLErrorCancelled)
+        XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
+    func test_doesNotIgnore102OnWrongDomain() {
+        // コード 102 でもドメインが `WebKitErrorDomain` 以外なら無視しない。
+        let error = NSError(domain: NSURLErrorDomain, code: 102)
+        XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
