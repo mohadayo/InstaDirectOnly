@@ -169,6 +169,19 @@ struct InstagramWebView: UIViewRepresentable {
     /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
     static let allowedSchemes: Set<String> = ["http", "https"]
 
+    /// Web Content Process がクラッシュした際にリロードすべき URL を決定する。
+    /// クラッシュ前に表示していた URL が allowlist を満たす場合はその URL を返し
+    /// （DM スレッド閲覧中のクラッシュからもスレッド位置を保持して復帰させる）、
+    /// それ以外（URL 未確定／許可外 URL 表示中）は安全側に倒して `dmURL` を返す。
+    /// `webViewWebContentProcessDidTerminate(_:)` から呼ばれるが、テスト容易性の
+    /// ために delegate 経路と切り離した静的ヘルパーとして公開する。
+    static func urlToReloadAfterContentProcessTermination(currentURL: URL?) -> URL {
+        if let url = currentURL, Self.isAllowedURL(url) {
+            return url
+        }
+        return Self.dmURL
+    }
+
     /// `WKWebView` が内部的に使う `WebKitErrorDomain` の文字列。Apple 公開ヘッダーには
     /// シンボルが無いため、`(error as NSError).domain` との比較用にここに集約しておく。
     static let webKitErrorDomain: String = "WebKitErrorDomain"
@@ -373,6 +386,22 @@ struct InstagramWebView: UIViewRepresentable {
         /// ロード後の二重注入も安全（既存 `<style>` が見つかれば早期 return）。
         private func injectCSS(into webView: WKWebView) {
             webView.evaluateJavaScript(InstagramWebView.injectStyleJS)
+        }
+
+        /// Web Content Process がクラッシュしたときに呼ばれる。
+        /// 何もしないと `WKWebView` は空の白ビューのままユーザに残る（操作不能）。
+        /// Apple 公式の推奨パターンとして、クラッシュ前の URL（許可済みのみ）を
+        /// 再ロードして自動復帰させる。許可外 URL を表示していた場合や URL 未確定
+        /// の場合は安全側に倒して DM 受信箱へ戻す。
+        /// 再ロードの前にエラーオーバーレイの残骸をクリアし、`isLoading` 表示が
+        /// 古い値で固着しないよう一旦リセットする。
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            parent.loadError = nil
+            parent.isLoading = false
+            let reloadURL = InstagramWebView.urlToReloadAfterContentProcessTermination(
+                currentURL: webView.url
+            )
+            webView.load(URLRequest(url: reloadURL))
         }
     }
 }
