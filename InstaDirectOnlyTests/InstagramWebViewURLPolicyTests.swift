@@ -588,6 +588,55 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(InstagramWebView.isIgnorableNavigationError(error))
     }
 
+    // MARK: - Web Content Process クラッシュからの復帰
+
+    func test_reloadAfterTermination_preservesAllowedDirectThread() {
+        // 個別 DM スレッド閲覧中にクラッシュした場合、同じスレッド位置に戻れること。
+        let current = URL(string: "https://www.instagram.com/direct/t/1234567890/")!
+        let result = InstagramWebView.urlToReloadAfterContentProcessTermination(
+            currentURL: current
+        )
+        XCTAssertEqual(result, current)
+    }
+
+    func test_reloadAfterTermination_preservesAllowedCDNHost() {
+        // CDN ホスト表示中（例えば添付メディア）も allowlist を満たすので保持。
+        let current = URL(string: "https://scontent.cdninstagram.com/v/asset.jpg")!
+        let result = InstagramWebView.urlToReloadAfterContentProcessTermination(
+            currentURL: current
+        )
+        XCTAssertEqual(result, current)
+    }
+
+    func test_reloadAfterTermination_fallsBackToDMURLWhenCurrentIsDisallowed() {
+        // 何らかの理由で許可外 URL が currentURL になっている場合（直前にブロック中の
+        // 遷移途中でクラッシュした等）は、安全側に倒して dmURL に戻すこと。
+        let current = URL(string: "https://www.instagram.com/explore/")!
+        let result = InstagramWebView.urlToReloadAfterContentProcessTermination(
+            currentURL: current
+        )
+        XCTAssertEqual(result, InstagramWebView.dmURL)
+    }
+
+    func test_reloadAfterTermination_fallsBackToDMURLWhenCurrentIsNil() {
+        // 初回ロードが URL コミット前にクラッシュした場合は currentURL が nil。
+        // この場合も dmURL から再開する。
+        let result = InstagramWebView.urlToReloadAfterContentProcessTermination(
+            currentURL: nil
+        )
+        XCTAssertEqual(result, InstagramWebView.dmURL)
+    }
+
+    func test_reloadAfterTermination_fallsBackToDMURLWhenCurrentIsPhishingLookalike() {
+        // 偽装ホスト（部分一致を狙う lookalike）が currentURL に紛れていた場合も
+        // allowlist で弾かれ、dmURL に戻ること。
+        let current = URL(string: "https://evil-instagram.com.attacker.example/direct/")!
+        let result = InstagramWebView.urlToReloadAfterContentProcessTermination(
+            currentURL: current
+        )
+        XCTAssertEqual(result, InstagramWebView.dmURL)
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
