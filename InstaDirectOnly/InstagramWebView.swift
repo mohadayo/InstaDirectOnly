@@ -182,6 +182,42 @@ struct InstagramWebView: UIViewRepresentable {
         return Self.dmURL
     }
 
+    /// Web Content Process クラッシュ自動復帰のレート制限ウィンドウ（秒）。
+    /// この期間内のクラッシュ回数で自動リロードの停止可否を判定する。
+    static let crashRecoveryWindow: TimeInterval = 30
+
+    /// レート制限ウィンドウ内に許容する自動復帰回数。
+    /// `crashRecoveryMaxAttempts` 回目までは自動リロードし、`crashRecoveryMaxAttempts + 1`
+    /// 回目以降は自動復帰を停止してエラーオーバーレイを表示する。
+    static let crashRecoveryMaxAttempts: Int = 3
+
+    /// 自動復帰停止時にエラーオーバーレイへ表示するメッセージ。
+    /// ユーザは `再試行` ボタン経由で再ロードを手動トリガーできる。
+    static let crashRecoveryGiveUpMessage: String =
+        "Web Content Process が短時間で繰り返し終了しました。再試行ボタンで再読み込みしてください。"
+
+    /// `timestamps` をウィンドウ内のものに絞り込んで返す。
+    /// テスト容易性のために切り出している（時刻判定をモックしやすい）。
+    static func recentCrashTimestamps(
+        _ timestamps: [Date],
+        now: Date,
+        window: TimeInterval = crashRecoveryWindow
+    ) -> [Date] {
+        return timestamps.filter { now.timeIntervalSince($0) < window }
+    }
+
+    /// 直近ウィンドウ内のクラッシュ回数がしきい値以上なら自動復帰を止めるべき。
+    /// `timestamps` は最新試行を含めて呼び出すこと（呼び元で append してから渡す）。
+    static func shouldStopAutoRecovery(
+        timestamps: [Date],
+        now: Date,
+        window: TimeInterval = crashRecoveryWindow,
+        maxAttempts: Int = crashRecoveryMaxAttempts
+    ) -> Bool {
+        let recent = recentCrashTimestamps(timestamps, now: now, window: window)
+        return recent.count > maxAttempts
+    }
+
     /// `WKWebView` が内部的に使う `WebKitErrorDomain` の文字列。Apple 公開ヘッダーには
     /// シンボルが無いため、`(error as NSError).domain` との比較用にここに集約しておく。
     static let webKitErrorDomain: String = "WebKitErrorDomain"
@@ -255,6 +291,10 @@ struct InstagramWebView: UIViewRepresentable {
         /// `deinit` で必ず `invalidate()` する（Coordinator 寿命より長い WebView は無いが、
         /// SwiftUI 再生成時の二重観測を防ぐためにも明示的に解放する）。
         private var progressObservation: NSKeyValueObservation?
+        /// Web Content Process クラッシュの直近タイムスタンプ。
+        /// `webViewWebContentProcessDidTerminate(_:)` で append し、ウィンドウ外の値は
+        /// 評価時に `recentCrashTimestamps` で除去する。
+        private var crashRecoveryTimestamps: [Date] = []
 
         init(_ parent: InstagramWebView) {
             self.parent = parent
@@ -395,13 +435,42 @@ struct InstagramWebView: UIViewRepresentable {
         /// の場合は安全側に倒して DM 受信箱へ戻す。
         /// 再ロードの前にエラーオーバーレイの残骸をクリアし、`isLoading` 表示が
         /// 古い値で固着しないよう一旦リセットする。
+        ///
+        /// レート制限: 短時間に繰り返しクラッシュした場合（`crashRecoveryWindow` 内に
+        /// `crashRecoveryMaxAttempts` 回を超過）は自動復帰を停止し、エラーオーバーレイ
+        /// を表示する。これによりロード→クラッシュ→ロード の無限ループとバッテリー
+        /// 浪費を防ぐ。ユーザは `再試行` ボタンで手動復帰でき、その時点で
+        /// `crashRecoveryTimestamps` をクリアして次の連続クラッシュ検出に備える。
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-            parent.loadError = nil
+            let now = Date()
+            crashRecoveryTimestamps.append(now)
+            crashRecoveryTimestamps = InstagramWebView.recentCrashTimestamps(
+                crashRecoveryTimestamps,
+                now: now
+            )
+
             parent.isLoading = false
+
+            if InstagramWebView.shouldStopAutoRecovery(
+                timestamps: crashRecoveryTimestamps,
+                now: now
+            ) {
+                parent.loadError = InstagramWebView.crashRecoveryGiveUpMessage
+                return
+            }
+
+            parent.loadError = nil
             let reloadURL = InstagramWebView.urlToReloadAfterContentProcessTermination(
                 currentURL: webView.url
             )
             webView.load(URLRequest(url: reloadURL))
+        }
+
+        /// ユーザが `再試行` ボタンで手動復帰した際の後処理用。
+        /// 連続クラッシュ計測をリセットし、次に短時間連続クラッシュが発生した場合に
+        /// 改めて自動復帰のチャンスを与える。
+        func resetCrashRecoveryState() {
+            crashRecoveryTimestamps.removeAll()
         }
     }
 }

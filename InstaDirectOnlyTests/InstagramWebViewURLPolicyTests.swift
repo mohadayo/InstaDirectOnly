@@ -637,6 +637,73 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertEqual(result, InstagramWebView.dmURL)
     }
 
+    // MARK: - Web Content Process クラッシュ復帰のレート制限
+
+    func test_recentCrashTimestamps_filtersOutOldEntries() {
+        // ウィンドウ外（古い）タイムスタンプは除外される。
+        let now = Date()
+        let old = now.addingTimeInterval(-(InstagramWebView.crashRecoveryWindow + 1))
+        let recent = now.addingTimeInterval(-1)
+        let result = InstagramWebView.recentCrashTimestamps([old, recent], now: now)
+        XCTAssertEqual(result, [recent])
+    }
+
+    func test_recentCrashTimestamps_keepsExactBoundaryEntries() {
+        // ウィンドウ内（境界よりも新しい）のエントリは保持される。
+        let now = Date()
+        let onEdge = now.addingTimeInterval(-(InstagramWebView.crashRecoveryWindow - 0.1))
+        let result = InstagramWebView.recentCrashTimestamps([onEdge], now: now)
+        XCTAssertEqual(result.count, 1)
+    }
+
+    func test_shouldStopAutoRecovery_returnsFalseBelowThreshold() {
+        // しきい値以内（=== maxAttempts）はまだ自動復帰を続ける。
+        let now = Date()
+        let timestamps = (0..<InstagramWebView.crashRecoveryMaxAttempts).map { _ in now }
+        XCTAssertFalse(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: timestamps,
+                now: now
+            )
+        )
+    }
+
+    func test_shouldStopAutoRecovery_returnsTrueAboveThreshold() {
+        // しきい値超過（maxAttempts + 1 回目以降）で自動復帰を停止すべきと判定。
+        let now = Date()
+        let timestamps = (0..<(InstagramWebView.crashRecoveryMaxAttempts + 1)).map { _ in now }
+        XCTAssertTrue(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: timestamps,
+                now: now
+            )
+        )
+    }
+
+    func test_shouldStopAutoRecovery_ignoresOldEntriesOutsideWindow() {
+        // 古いエントリばかりが大量にあっても、ウィンドウ内に入っていなければ復帰継続。
+        let now = Date()
+        let outside = now.addingTimeInterval(-(InstagramWebView.crashRecoveryWindow + 1))
+        let timestamps = Array(repeating: outside, count: 100) + [now]
+        XCTAssertFalse(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: timestamps,
+                now: now
+            )
+        )
+    }
+
+    func test_shouldStopAutoRecovery_emptyTimestampsAlwaysFalse() {
+        // タイムスタンプ無し（初回クラッシュ前）は当然継続。
+        let now = Date()
+        XCTAssertFalse(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: [],
+                now: now
+            )
+        )
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
