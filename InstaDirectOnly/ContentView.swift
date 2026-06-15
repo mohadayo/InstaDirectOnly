@@ -54,9 +54,19 @@ struct ContentView: View {
     /// （個別 DM スレッド閲覧中のネットワーク失敗から、同じスレッドに戻れるようにするため）。
     /// 初回ロードが URL コミット前に失敗した場合（`webView.url == nil`）に限り、
     /// フォールバックとして DM 受信箱 (`dmURL`) をロードする。
+    ///
+    /// 連続クラッシュの自動復帰がしきい値を超えて停止した状態でユーザが「再試行」を
+    /// 押したケースでは、`Coordinator.resetCrashRecoveryState()` を呼んで直近の
+    /// クラッシュタイムスタンプをクリアする。これによって、次のクラッシュからは
+    /// 改めて `crashRecoveryWindow` 内で `crashRecoveryMaxAttempts` 回まで自動復帰
+    /// するチャンスが与えられる（リセットしないと、ユーザの手動再試行直後に
+    /// もう一度クラッシュした瞬間に、過去のタイムスタンプが残っているせいで
+    /// 即座に「自動復帰停止」に戻ってしまう）。
     private func reload() {
         loadError = nil
-        guard let wv = webView?.webView else { return }
+        guard let ref = webView else { return }
+        ref.coordinator?.resetCrashRecoveryState()
+        guard let wv = ref.webView else { return }
         if wv.url != nil {
             wv.reload()
         } else {
