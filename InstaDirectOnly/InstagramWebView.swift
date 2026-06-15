@@ -1,9 +1,14 @@
 import SwiftUI
 import WebKit
 
-/// WKWebViewへの参照を保持する型
+/// WKWebViewへの参照を保持する型。
+///
+/// `webView` に加えて、ContentView 側の「再試行」処理から `Coordinator` の状態
+/// （連続クラッシュ計測のリセット等）を呼び出せるように `coordinator` 参照も持つ。
+/// 両方とも `weak` で保持し、UIViewRepresentable の解体に追従して自動的に nil 化する。
 class WebViewRef {
     weak var webView: WKWebView?
+    weak var coordinator: InstagramWebView.Coordinator?
 }
 
 struct InstagramWebView: UIViewRepresentable {
@@ -122,6 +127,7 @@ struct InstagramWebView: UIViewRepresentable {
         DispatchQueue.main.async {
             let ref = WebViewRef()
             ref.webView = webView
+            ref.coordinator = context.coordinator
             self.webViewRef = ref
         }
 
@@ -294,7 +300,8 @@ struct InstagramWebView: UIViewRepresentable {
         /// Web Content Process クラッシュの直近タイムスタンプ。
         /// `webViewWebContentProcessDidTerminate(_:)` で append し、ウィンドウ外の値は
         /// 評価時に `recentCrashTimestamps` で除去する。
-        private var crashRecoveryTimestamps: [Date] = []
+        /// `@testable` ターゲットから状態リセット検証用に観測するため `internal`。
+        var crashRecoveryTimestamps: [Date] = []
 
         init(_ parent: InstagramWebView) {
             self.parent = parent
