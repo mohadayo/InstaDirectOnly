@@ -704,6 +704,62 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - Coordinator.resetCrashRecoveryState
+
+    /// `Coordinator` のインスタンスを生成するための最小限のテストヘルパ。
+    /// `@Binding` は SwiftUI の View 階層外でも `.constant(...)` で生成できる。
+    private func makeCoordinatorForReset() -> InstagramWebView.Coordinator {
+        let view = InstagramWebView(
+            isLoading: .constant(false),
+            webViewRef: .constant(nil),
+            loadError: .constant(nil),
+            loadProgress: .constant(0.0)
+        )
+        return view.makeCoordinator()
+    }
+
+    func test_resetCrashRecoveryState_clearsAppendedTimestamps() {
+        // crashRecoveryTimestamps に値が積まれている状態でリセットすると、空配列に戻る。
+        // これは「再試行」ボタンから連続クラッシュ計測をクリアして、自動復帰の
+        // ウィンドウを再度ユーザに与えるための公開 API。
+        let coordinator = makeCoordinatorForReset()
+        coordinator.crashRecoveryTimestamps = [Date(), Date(), Date()]
+        XCTAssertEqual(coordinator.crashRecoveryTimestamps.count, 3)
+        coordinator.resetCrashRecoveryState()
+        XCTAssertTrue(coordinator.crashRecoveryTimestamps.isEmpty)
+    }
+
+    func test_resetCrashRecoveryState_isIdempotentOnEmpty() {
+        // 元から空のリストに対してリセットを呼んでもクラッシュせず、引き続き空のまま。
+        let coordinator = makeCoordinatorForReset()
+        XCTAssertTrue(coordinator.crashRecoveryTimestamps.isEmpty)
+        coordinator.resetCrashRecoveryState()
+        coordinator.resetCrashRecoveryState()
+        XCTAssertTrue(coordinator.crashRecoveryTimestamps.isEmpty)
+    }
+
+    func test_resetCrashRecoveryState_allowsImmediateRecoveryAfterReset() {
+        // リセット直後は「停止すべき」と判定されない（= 自動復帰が再び有効）。
+        // ウィンドウ閾値ぎりぎりまで埋めて、その後リセットして判定が False に変わることを確認する。
+        let coordinator = makeCoordinatorForReset()
+        let now = Date()
+        coordinator.crashRecoveryTimestamps = (0..<(InstagramWebView.crashRecoveryMaxAttempts + 1))
+            .map { _ in now }
+        XCTAssertTrue(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: coordinator.crashRecoveryTimestamps,
+                now: now
+            )
+        )
+        coordinator.resetCrashRecoveryState()
+        XCTAssertFalse(
+            InstagramWebView.shouldStopAutoRecovery(
+                timestamps: coordinator.crashRecoveryTimestamps,
+                now: now
+            )
+        )
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
