@@ -114,8 +114,9 @@ struct InstagramWebView: UIViewRepresentable {
         webView.backgroundColor = .black
         webView.scrollView.backgroundColor = .black
 
-        // モバイルSafariのUser-Agentを設定
-        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        // モバイル Safari の User-Agent を設定。文字列は `Self.mobileSafariUserAgent`
+        // に集約しており、iOS バージョンの bump はそちらの定数のみを更新する。
+        webView.customUserAgent = Self.mobileSafariUserAgent
 
         webView.load(URLRequest(url: Self.dmURL))
 
@@ -174,6 +175,18 @@ struct InstagramWebView: UIViewRepresentable {
     /// 許可する URL スキーム。`http` / `https` のみを通し、`javascript:` `data:`
     /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
     static let allowedSchemes: Set<String> = ["http", "https"]
+
+    /// WKWebView に設定するモバイル Safari の User-Agent 文字列。
+    /// Instagram モバイル Web 版は UA を見てモバイル向け UI / 機能セットに分岐するため、
+    /// 「モバイル Safari として正しく見える」フォーマットを維持する必要がある。
+    /// 旧来のマジック文字列を `makeUIView` 内に埋めると検索性・テスト性が悪く、
+    /// iOS バージョンの bump タイミングで取りこぼしが起きやすかったため、
+    /// `static let` として一元管理する。テストからもこの定数を参照して
+    /// フォーマット崩れ（例: `Safari/` 抜け、空文字列）を回帰検証する。
+    static let mobileSafariUserAgent: String =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) "
+        + "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        + "Version/18.0 Mobile/15E148 Safari/604.1"
 
     /// Web Content Process がクラッシュした際にリロードすべき URL を決定する。
     /// クラッシュ前に表示していた URL が allowlist を満たす場合はその URL を返し

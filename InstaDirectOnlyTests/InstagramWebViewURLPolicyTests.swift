@@ -876,6 +876,56 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - mobileSafariUserAgent
+
+    func test_mobileSafariUserAgent_isNotEmpty() {
+        // UA 文字列が空だと WKWebView 側でデフォルト UA に戻り、
+        // Instagram モバイル Web 版がモバイル分岐に乗らない可能性があるため、
+        // 空文字列ではないことを最低限保証する。
+        XCTAssertFalse(InstagramWebView.mobileSafariUserAgent.isEmpty)
+    }
+
+    func test_mobileSafariUserAgent_identifiesAsIPhone() {
+        // モバイル端末として認識されるために `iPhone` トークンを必ず含むこと。
+        XCTAssertTrue(InstagramWebView.mobileSafariUserAgent.contains("iPhone"))
+    }
+
+    func test_mobileSafariUserAgent_identifiesAsMobile() {
+        // Mobile Safari として認識されるために `Mobile/` ビルド指定を含むこと。
+        // 一部のサーバは UA 中の `Mobile` トークン有無でモバイル分岐するため、
+        // 抜け落ちないように回帰する。
+        XCTAssertTrue(InstagramWebView.mobileSafariUserAgent.contains("Mobile/"))
+    }
+
+    func test_mobileSafariUserAgent_identifiesAsSafari() {
+        // `Safari/` トークンが無いと UA は Mobile Safari ではなく
+        // 別ブラウザ (in-app WebView 扱い) と判断され、UI が変わることがある。
+        XCTAssertTrue(InstagramWebView.mobileSafariUserAgent.contains("Safari/"))
+    }
+
+    func test_mobileSafariUserAgent_includesWebKit() {
+        // WebKit ベースであることを示す `AppleWebKit/` を含むこと。
+        XCTAssertTrue(InstagramWebView.mobileSafariUserAgent.contains("AppleWebKit/"))
+    }
+
+    func test_mobileSafariUserAgent_includesMozillaPrefix() {
+        // 慣習に従い `Mozilla/5.0` プレフィクスを持つこと。
+        // これが無いと一部の従来型 UA 判定でデスクトップ扱いされる可能性がある。
+        XCTAssertTrue(InstagramWebView.mobileSafariUserAgent.hasPrefix("Mozilla/5.0"))
+    }
+
+    func test_mobileSafariUserAgent_hasNoControlCharacters() {
+        // UA 文字列は HTTP ヘッダに乗るため、改行 / NUL などの制御文字は含めない。
+        // `customUserAgent` に流す段階で UIKit 側が rejection するわけではないので、
+        // ここで早期に弾く。
+        for scalar in InstagramWebView.mobileSafariUserAgent.unicodeScalars {
+            XCTAssertFalse(
+                CharacterSet.controlCharacters.contains(scalar),
+                "UA に制御文字が含まれている: \(scalar.value)"
+            )
+        }
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
