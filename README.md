@@ -110,6 +110,19 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 
 上記いずれにも当てはまらない通信失敗・TLS エラー等の本物のエラーは、引き続きオーバーレイで報告します。これにより、許可外 URL を踏んだ際に「読み込みに失敗しました」オーバーレイが一瞬表示されてしまうリグレッションを防いでいます。
 
+#### ユーザー向けエラーメッセージのマッピング
+
+`Error.localizedDescription` は端末ロケールやエラー種別によっては英語のまま返ることがあり（例: "The Internet connection appears to be offline."）、エンドユーザーには不親切です。`InstagramWebView.userFriendlyErrorMessage(for:)` で代表的な `NSURLErrorDomain` コードを以下のように日本語メッセージへ寄せています：
+
+| エラーコード | 表示メッセージ |
+|---|---|
+| `NSURLErrorNotConnectedToInternet` | インターネット接続がありません。Wi-Fi またはモバイル通信を確認して再試行してください。 |
+| `NSURLErrorTimedOut` | 通信がタイムアウトしました。電波状況を確認して再試行してください。 |
+| `NSURLErrorNetworkConnectionLost` | 通信が切断されました。再試行してください。 |
+| `NSURLErrorCannotFindHost` / `NSURLErrorCannotConnectToHost` / `NSURLErrorDNSLookupFailed` | サーバに接続できませんでした。電波状況を確認して再試行してください。 |
+| `NSURLErrorSecureConnectionFailed` 系（証明書系含む） | 安全な接続を確立できませんでした。時間をおいて再試行してください。 |
+| 上記以外 | `error.localizedDescription` をそのまま表示（フォールバック） |
+
 ### 読み込み進捗の表示
 
 画面最上部に、`WKWebView.estimatedProgress`（0.0〜1.0）を反映する **薄いリニアプログレスバー** を表示します。Safari の URL バー下に出るような細い進捗バーで、「いつ終わりそうか」がひと目で分かるようにするための UX 改善です。

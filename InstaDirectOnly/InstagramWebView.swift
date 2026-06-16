@@ -253,6 +253,45 @@ struct InstagramWebView: UIViewRepresentable {
         return false
     }
 
+    /// `NSURLErrorDomain` の代表的な失敗コードを、エンドユーザ向けの読みやすい
+    /// 日本語メッセージへ変換する。`Foundation` の `localizedDescription` は
+    /// 端末ロケールが英語の場合にそのまま英語で返ることがあり、
+    /// 「The Internet connection appears to be offline.」のような cryptic な文言が
+    /// オーバーレイへ流れてしまう。本ヘルパーで主要コードは一律日本語の
+    /// アクション付きメッセージへ寄せ、それ以外は従来どおり
+    /// `error.localizedDescription` をフォールバックとして返す。
+    ///
+    /// テスト容易性のために `WKNavigationDelegate` の経路と切り離した
+    /// `static` メソッドとして公開する。
+    static func userFriendlyErrorMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet:
+                return "インターネット接続がありません。Wi-Fi またはモバイル通信を確認して再試行してください。"
+            case NSURLErrorTimedOut:
+                return "通信がタイムアウトしました。電波状況を確認して再試行してください。"
+            case NSURLErrorNetworkConnectionLost:
+                return "通信が切断されました。再試行してください。"
+            case NSURLErrorCannotFindHost,
+                 NSURLErrorCannotConnectToHost,
+                 NSURLErrorDNSLookupFailed:
+                return "サーバに接続できませんでした。電波状況を確認して再試行してください。"
+            case NSURLErrorSecureConnectionFailed,
+                 NSURLErrorServerCertificateHasBadDate,
+                 NSURLErrorServerCertificateUntrusted,
+                 NSURLErrorServerCertificateHasUnknownRoot,
+                 NSURLErrorServerCertificateNotYetValid,
+                 NSURLErrorClientCertificateRejected,
+                 NSURLErrorClientCertificateRequired:
+                return "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
+    }
+
     /// 指定URLがDM利用に必要かどうかを判定
     static func isAllowedURL(_ url: URL) -> Bool {
         // スキームの allowlist 検査を最初に行う。
@@ -423,7 +462,7 @@ struct InstagramWebView: UIViewRepresentable {
             if InstagramWebView.isIgnorableNavigationError(error) {
                 return
             }
-            parent.loadError = error.localizedDescription
+            parent.loadError = InstagramWebView.userFriendlyErrorMessage(for: error)
         }
 
         /// SPA 的な soft navigation（History API による遷移）では document が
