@@ -760,6 +760,122 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - userFriendlyErrorMessage
+
+    func test_userFriendlyErrorMessage_offline() {
+        // NSURLErrorNotConnectedToInternet は固定の日本語メッセージへマップされる。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorNotConnectedToInternet,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "インターネット接続がありません。Wi-Fi またはモバイル通信を確認して再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_timeout() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorTimedOut,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "通信がタイムアウトしました。電波状況を確認して再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_networkConnectionLost() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorNetworkConnectionLost,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "通信が切断されました。再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_cannotFindHost_mapsToServerUnreachable() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCannotFindHost,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバに接続できませんでした。電波状況を確認して再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_dnsLookupFailed_mapsToServerUnreachable() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorDNSLookupFailed,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバに接続できませんでした。電波状況を確認して再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_secureConnectionFailed_mapsToTLSMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorSecureConnectionFailed,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_certificateInvalid_mapsToTLSMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorServerCertificateUntrusted,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_unknownNSURLCode_fallsBackToLocalizedDescription() {
+        // マッピング表に無い NSURLErrorDomain コードは、従来どおり
+        // localizedDescription をそのまま返す。
+        let fallback = "Some other URL load error"
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: -424242,
+            userInfo: [NSLocalizedDescriptionKey: fallback]
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            fallback
+        )
+    }
+
+    func test_userFriendlyErrorMessage_nonNSURLDomain_fallsBackToLocalizedDescription() {
+        // NSURLErrorDomain 以外のドメイン（例: NSPOSIXErrorDomain）はマップ対象外。
+        let fallback = "Some POSIX failure"
+        let error = NSError(
+            domain: NSPOSIXErrorDomain,
+            code: 5,
+            userInfo: [NSLocalizedDescriptionKey: fallback]
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            fallback
+        )
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
