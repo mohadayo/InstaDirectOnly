@@ -298,6 +298,17 @@ struct InstagramWebView: UIViewRepresentable {
                  NSURLErrorClientCertificateRejected,
                  NSURLErrorClientCertificateRequired:
                 return "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+            case NSURLErrorDataNotAllowed:
+                return "このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。"
+            case NSURLErrorInternationalRoamingOff:
+                return "海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。"
+            case NSURLErrorCallIsActive:
+                return "通話中のためネットワークが利用できません。通話を終了してから再試行してください。"
+            case NSURLErrorBadServerResponse:
+                return "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+            case NSURLErrorHTTPTooManyRedirects,
+                 NSURLErrorRedirectToNonExistentLocation:
+                return "リダイレクトが正しく解決できませんでした。時間をおいて再試行してください。"
             default:
                 break
             }
