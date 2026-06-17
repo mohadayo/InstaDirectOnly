@@ -847,6 +847,79 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    func test_userFriendlyErrorMessage_dataNotAllowed_mapsToCellularDisabledMessage() {
+        // 設定でアプリのモバイル通信が無効化されているケース。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorDataNotAllowed,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_internationalRoamingOff_mapsToRoamingMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorInternationalRoamingOff,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_callIsActive_mapsToCallActiveMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCallIsActive,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "通話中のためネットワークが利用できません。通話を終了してから再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_badServerResponse_mapsToServerErrorMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorBadServerResponse,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_tooManyRedirects_mapsToRedirectMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorHTTPTooManyRedirects,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "リダイレクトが正しく解決できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_redirectToNonExistentLocation_mapsToRedirectMessage() {
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorRedirectToNonExistentLocation,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "リダイレクトが正しく解決できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
     func test_userFriendlyErrorMessage_unknownNSURLCode_fallsBackToLocalizedDescription() {
         // マッピング表に無い NSURLErrorDomain コードは、従来どおり
         // localizedDescription をそのまま返す。
