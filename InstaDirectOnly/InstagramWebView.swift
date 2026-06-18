@@ -296,8 +296,13 @@ struct InstagramWebView: UIViewRepresentable {
                  NSURLErrorServerCertificateHasUnknownRoot,
                  NSURLErrorServerCertificateNotYetValid,
                  NSURLErrorClientCertificateRejected,
-                 NSURLErrorClientCertificateRequired:
+                 NSURLErrorClientCertificateRequired,
+                 NSURLErrorAppTransportSecurityRequiresSecureConnection:
                 return "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+            case NSURLErrorNetworkAuthenticationRequired:
+                return "ネットワーク認証が必要です。公衆 Wi-Fi のログイン画面をブラウザで開いて認証を完了してから再試行してください。"
+            case NSURLErrorUserAuthenticationRequired:
+                return "認証が必要です。一度ログアウトして再ログインしてから再試行してください。"
             case NSURLErrorDataNotAllowed:
                 return "このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。"
             case NSURLErrorInternationalRoamingOff:
