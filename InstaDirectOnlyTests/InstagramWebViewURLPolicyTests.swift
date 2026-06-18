@@ -847,6 +847,49 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    func test_userFriendlyErrorMessage_appTransportSecurity_mapsToTLSMessage() {
+        // App Transport Security により非セキュアな http 接続が拒否された場合も、
+        // 既存の TLS/証明書系メッセージグループに合流させる（ユーザ視点では
+        // 「安全な接続が確立できなかった」事象として同質のため）。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorAppTransportSecurityRequiresSecureConnection,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_networkAuthenticationRequired_mapsToCaptivePortalMessage() {
+        // 公衆 Wi-Fi (ホテル・空港・カフェ等) の Captive Portal 認証が未完了の場合に発火する。
+        // ユーザが取るべき具体的なアクション（Wi-Fi のログイン画面を確認）を返す。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorNetworkAuthenticationRequired,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "ネットワーク認証が必要です。公衆 Wi-Fi のログイン画面をブラウザで開いて認証を完了してから再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_userAuthenticationRequired_mapsToReLoginMessage() {
+        // サーバ／プロキシ側で認証が要求された場合。Instagram 側のセッション失効や
+        // 二段階認証要求などで発火しうるため、再ログインを促す。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorUserAuthenticationRequired,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "認証が必要です。一度ログアウトして再ログインしてから再試行してください。"
+        )
+    }
+
     func test_userFriendlyErrorMessage_dataNotAllowed_mapsToCellularDisabledMessage() {
         // 設定でアプリのモバイル通信が無効化されているケース。
         let error = NSError(
