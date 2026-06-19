@@ -127,8 +127,17 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 | `NSURLErrorTimedOut` | 通信がタイムアウトしました。電波状況を確認して再試行してください。 |
 | `NSURLErrorNetworkConnectionLost` | 通信が切断されました。再試行してください。 |
 | `NSURLErrorCannotFindHost` / `NSURLErrorCannotConnectToHost` / `NSURLErrorDNSLookupFailed` | サーバに接続できませんでした。電波状況を確認して再試行してください。 |
-| `NSURLErrorSecureConnectionFailed` 系（証明書系含む） | 安全な接続を確立できませんでした。時間をおいて再試行してください。 |
-| 上記以外 | `error.localizedDescription` をそのまま表示（フォールバック） |
+| `NSURLErrorSecureConnectionFailed` 系（証明書系・`NSURLErrorAppTransportSecurityRequiresSecureConnection` 含む） | 安全な接続を確立できませんでした。時間をおいて再試行してください。 |
+| `NSURLErrorNetworkAuthenticationRequired`（公衆 Wi-Fi の Captive Portal 等） | ネットワーク認証が必要です。公衆 Wi-Fi のログイン画面をブラウザで開いて認証を完了してから再試行してください。 |
+| `NSURLErrorUserAuthenticationRequired`（サーバ／プロキシ側の認証要求） | 認証が必要です。一度ログアウトして再ログインしてから再試行してください。 |
+| `NSURLErrorDataNotAllowed`（アプリにモバイル通信が許可されていない） | このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。 |
+| `NSURLErrorInternationalRoamingOff`（海外ローミング無効） | 海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。 |
+| `NSURLErrorCallIsActive`（通話中で通信不可） | 通話中のためネットワークが利用できません。通話を終了してから再試行してください。 |
+| `NSURLErrorBadServerResponse` | サーバから不正な応答が返されました。時間をおいて再試行してください。 |
+| `NSURLErrorHTTPTooManyRedirects` / `NSURLErrorRedirectToNonExistentLocation` | リダイレクトが正しく解決できませんでした。時間をおいて再試行してください。 |
+| 上記以外（マッピング表に無い `NSURLErrorDomain` コードや、`NSURLErrorDomain` 以外のドメイン） | `error.localizedDescription` をそのまま表示（フォールバック） |
+
+> マッピングの境界は `InstaDirectOnlyTests/InstagramWebViewURLPolicyTests.swift` の `test_userFriendlyErrorMessage_*` 群で全ケース回帰しています。新しいコードを追加する際は本表とテストの双方を更新してください。
 
 ### 読み込み進捗の表示
 
