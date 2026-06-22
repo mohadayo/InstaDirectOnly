@@ -309,7 +309,11 @@ struct InstagramWebView: UIViewRepresentable {
                 return "海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。"
             case NSURLErrorCallIsActive:
                 return "通話中のためネットワークが利用できません。通話を終了してから再試行してください。"
-            case NSURLErrorBadServerResponse:
+            case NSURLErrorBadServerResponse,
+                 NSURLErrorZeroByteResource,
+                 NSURLErrorCannotDecodeRawData,
+                 NSURLErrorCannotDecodeContentData,
+                 NSURLErrorCannotParseResponse:
                 return "サーバから不正な応答が返されました。時間をおいて再試行してください。"
             case NSURLErrorHTTPTooManyRedirects,
                  NSURLErrorRedirectToNonExistentLocation:
