@@ -939,6 +939,62 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    func test_userFriendlyErrorMessage_zeroByteResource_mapsToServerErrorMessage() {
+        // レスポンスボディがゼロバイト（サーバ側が不正な空応答を返した）。
+        // ユーザ向けの復旧操作は NSURLErrorBadServerResponse と同じ「時間をおいて再試行」。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorZeroByteResource,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_cannotDecodeRawData_mapsToServerErrorMessage() {
+        // Transfer-Encoding (chunked 等) のデコードに失敗。
+        // ユーザ視点では「サーバが壊れたバイナリを返した」状態なので同バケットへ寄せる。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCannotDecodeRawData,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_cannotDecodeContentData_mapsToServerErrorMessage() {
+        // Content-Encoding (gzip / br 等) のデコードに失敗。
+        // 復旧操作は NSURLErrorBadServerResponse と同じ。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCannotDecodeContentData,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_cannotParseResponse_mapsToServerErrorMessage() {
+        // HTTP レスポンスとしてパース不能（壊れたヘッダ行など）。
+        // 復旧操作は NSURLErrorBadServerResponse と同じ。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCannotParseResponse,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバから不正な応答が返されました。時間をおいて再試行してください。"
+        )
+    }
+
     func test_userFriendlyErrorMessage_tooManyRedirects_mapsToRedirectMessage() {
         let error = NSError(
             domain: NSURLErrorDomain,
