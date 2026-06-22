@@ -133,7 +133,7 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 | `NSURLErrorDataNotAllowed`（アプリにモバイル通信が許可されていない） | このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。 |
 | `NSURLErrorInternationalRoamingOff`（海外ローミング無効） | 海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。 |
 | `NSURLErrorCallIsActive`（通話中で通信不可） | 通話中のためネットワークが利用できません。通話を終了してから再試行してください。 |
-| `NSURLErrorBadServerResponse` | サーバから不正な応答が返されました。時間をおいて再試行してください。 |
+| `NSURLErrorBadServerResponse` / `NSURLErrorZeroByteResource`（空応答）/ `NSURLErrorCannotDecodeRawData`（Transfer-Encoding デコード失敗）/ `NSURLErrorCannotDecodeContentData`（Content-Encoding デコード失敗）/ `NSURLErrorCannotParseResponse`（HTTP レスポンスがパース不能） | サーバから不正な応答が返されました。時間をおいて再試行してください。 |
 | `NSURLErrorHTTPTooManyRedirects` / `NSURLErrorRedirectToNonExistentLocation` | リダイレクトが正しく解決できませんでした。時間をおいて再試行してください。 |
 | 上記以外（マッピング表に無い `NSURLErrorDomain` コードや、`NSURLErrorDomain` 以外のドメイン） | `error.localizedDescription` をそのまま表示（フォールバック） |
 
