@@ -1048,6 +1048,92 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - userFriendlyErrorMessage（TLS multi-case 内の追加コード）
+
+    func test_userFriendlyErrorMessage_cannotConnectToHost_mapsToServerUnreachableMessage() {
+        // `NSURLErrorCannotConnectToHost` は `NSURLErrorCannotFindHost` / `NSURLErrorDNSLookupFailed`
+        // と同じバケットへ寄せられている。コード側 multi-case 列挙からの脱落を検出するため、
+        // 個別の回帰テストを残す。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorCannotConnectToHost,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "サーバに接続できませんでした。電波状況を確認して再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_certificateBadDate_mapsToTLSMessage() {
+        // 端末時計が大幅にズレている、または証明書の `notAfter` を超過したケース。
+        // TLS 系の multi-case に含まれており、共通の安全な接続メッセージへ寄せる。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorServerCertificateHasBadDate,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_certificateUnknownRoot_mapsToTLSMessage() {
+        // 信頼されていないルート CA（社内 MDM プロキシ等で証明書を差し替えている環境）。
+        // ユーザに「安全な接続が確立できない」と認識させたいため、TLS バケットへ。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorServerCertificateHasUnknownRoot,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_certificateNotYetValid_mapsToTLSMessage() {
+        // 端末時計が証明書の `notBefore` よりも前を指しているケース。
+        // 多くはユーザ側の端末日付ズレが原因だが、ユーザ向けには TLS 共通メッセージで十分。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorServerCertificateNotYetValid,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_clientCertificateRejected_mapsToTLSMessage() {
+        // MDM 等で配布されたクライアント証明書がサーバに拒否されたケース。
+        // 本アプリは Instagram への通常通信が主だが、企業端末のプロキシ環境で発火しうる。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorClientCertificateRejected,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
+    func test_userFriendlyErrorMessage_clientCertificateRequired_mapsToTLSMessage() {
+        // クライアント証明書を要求されたが、端末側に該当証明書が無い／提示されなかったケース。
+        let error = NSError(
+            domain: NSURLErrorDomain,
+            code: NSURLErrorClientCertificateRequired,
+            userInfo: nil
+        )
+        XCTAssertEqual(
+            InstagramWebView.userFriendlyErrorMessage(for: error),
+            "安全な接続を確立できませんでした。時間をおいて再試行してください。"
+        )
+    }
+
     // MARK: - mobileSafariUserAgent
 
     func test_mobileSafariUserAgent_isNotEmpty() {
