@@ -1184,6 +1184,146 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         }
     }
 
+    // MARK: - CSS 注入定数（hideUnwantedUICSS）
+
+    func test_hideUnwantedUICSS_isNotEmpty() {
+        // 空の CSS が WebView に注入されても害は無いが、ビルド時に
+        // CSS リテラルが空文字列に置換される事故（マージミス等）に気付くため
+        // ガードとして検査する。
+        XCTAssertFalse(InstagramWebView.hideUnwantedUICSS.isEmpty)
+    }
+
+    func test_hideUnwantedUICSS_hidesBottomTablist() {
+        // 下部ナビゲーションバー（role="tablist"）非表示 selector が含まれていること。
+        // これが抜け落ちると DM 以外のタブ（フィード・リール・発見）が
+        // ボトムバーから露出し、本アプリの主目的が崩れる。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("role=\"tablist\""),
+            "tablist selector が hideUnwantedUICSS から消えている"
+        )
+    }
+
+    func test_hideUnwantedUICSS_hidesAppBanner() {
+        // アプリ誘導バナー（"Open in app" 等）非表示 selector が含まれていること。
+        // class 名が `banner` / `Banner` のどちらかにヒットする想定。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("banner")
+                || InstagramWebView.hideUnwantedUICSS.contains("Banner"),
+            "アプリ誘導バナー非表示 selector が hideUnwantedUICSS から消えている"
+        )
+    }
+
+    func test_hideUnwantedUICSS_usesImportantToOverrideInlineStyles() {
+        // Instagram モバイル Web 側のインラインスタイルや高優先度ルールに勝つため、
+        // 非表示 selector は `!important` を伴っている必要がある。
+        // `!important` が抜けると一部要素が再表示されるレグレッションが発生しうる。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("!important"),
+            "!important が hideUnwantedUICSS から欠落している"
+        )
+    }
+
+    func test_hideUnwantedUICSS_doesNotContainBacktick() {
+        // injectStyleJS 内で template literal `...` として埋め込まれるため、
+        // CSS 側に backtick が混入すると JavaScript の文字列リテラルが分割され
+        // 構文エラーで silent fail する。
+        XCTAssertFalse(
+            InstagramWebView.hideUnwantedUICSS.contains("`"),
+            "CSS 内に backtick が混入している（injectStyleJS の template literal を壊す）"
+        )
+    }
+
+    func test_hideUnwantedUICSS_doesNotContainTemplateInterpolation() {
+        // 同様に `${...}` は JavaScript の template literal で評価されてしまう。
+        // CSS 値として `${` を使う必要があれば `\\${` 等のエスケープが必要。
+        XCTAssertFalse(
+            InstagramWebView.hideUnwantedUICSS.contains("${"),
+            "CSS 内に ${ が混入している（JS template literal で評価されてしまう）"
+        )
+    }
+
+    // MARK: - JS 注入定数（injectStyleJS）
+
+    func test_injectStyleJS_isNotEmpty() {
+        XCTAssertFalse(InstagramWebView.injectStyleJS.isEmpty)
+    }
+
+    func test_injectStyleJS_includesStyleId() {
+        // 冪等な再注入のため、固定 ID 'idoa-injected-style' で既存 <style> を検出する。
+        // この ID が変わると重複追加防止が外れ、SPA 遷移ごとに <style> が
+        // 累積して DOM が肥大化する。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("idoa-injected-style"),
+            "固定 STYLE_ID が injectStyleJS から消えている"
+        )
+    }
+
+    func test_injectStyleJS_createsStyleElement() {
+        // <style> 要素を生成する DOM 操作を含むこと。
+        // createElement('style') と appendChild の両方が必要。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("createElement('style')")
+                || InstagramWebView.injectStyleJS.contains("createElement(\"style\")"),
+            "createElement('style') が injectStyleJS から消えている"
+        )
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("appendChild"),
+            "appendChild が injectStyleJS から消えている"
+        )
+    }
+
+    func test_injectStyleJS_appendsToHeadOrDocumentElement() {
+        // .atDocumentStart 実行時には document.head がまだ存在しない可能性があるため、
+        // document.head と document.documentElement の両方を参照し、
+        // フォールバックを持つ必要がある。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("document.head"),
+            "document.head 参照が injectStyleJS から消えている"
+        )
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("document.documentElement"),
+            "document.documentElement フォールバックが injectStyleJS から消えている"
+        )
+    }
+
+    func test_injectStyleJS_isIdempotentByEarlyReturn() {
+        // 同一 ID の <style> が既に存在する場合は早期 return すること。
+        // getElementById の存在確認と return の両方を含むことを最低限検査する。
+        // （SPA 遷移ごとの evaluateJavaScript 二重注入で <style> が累積するのを防ぐ）
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("getElementById"),
+            "getElementById による存在確認が injectStyleJS から消えている"
+        )
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("return"),
+            "早期 return が injectStyleJS から消えている"
+        )
+    }
+
+    func test_injectStyleJS_embedsHideUnwantedUICSS() {
+        // ビルド時に template literal へ展開された CSS 本体が
+        // 完全に含まれていること（split されたり escape で壊れたりしていないこと）。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains(InstagramWebView.hideUnwantedUICSS),
+            "hideUnwantedUICSS が injectStyleJS の中に埋め込まれていない"
+        )
+    }
+
+    func test_injectStyleJS_isWrappedInIIFE() {
+        // グローバル汚染を避けるため、注入スクリプトは IIFE (function(){...})()
+        // で囲われていることを期待する。IIFE が外れると `style` 等の一時変数が
+        // window スコープに残り、ページの JS と衝突しうる。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("(function()"),
+            "IIFE の開きが injectStyleJS に見つからない"
+        )
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("})();")
+                || InstagramWebView.injectStyleJS.contains("})()"),
+            "IIFE の閉じが injectStyleJS に見つからない"
+        )
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
