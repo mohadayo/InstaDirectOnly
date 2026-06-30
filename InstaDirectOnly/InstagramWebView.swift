@@ -176,6 +176,22 @@ struct InstagramWebView: UIViewRepresentable {
     /// `file:` `ftp:` などホスト位置に既知ドメインを埋め込んだ細工 URL を排除する。
     static let allowedSchemes: Set<String> = ["http", "https"]
 
+    /// `about:` スキームの中で `decidePolicyFor` が許可する URL の完全一致リスト。
+    /// `about:blank` は WKWebView が iframe 初期化やフラグメント遷移の中継で使う
+    /// 標準的な空ドキュメント URL、`about:srcdoc` は `<iframe srcdoc>` のソース URL
+    /// として使われる。それ以外の `about:config` / `about:newtab` / `about:cache`
+    /// 等は本アプリの用途で発生する余地が無く、敢えて拒否しておくことで
+    /// 将来 Apple が WebKit に追加する未知の about URL が無条件で通る事故を防ぐ。
+    static let allowedAboutURLs: Set<String> = ["about:blank", "about:srcdoc"]
+
+    /// `about:` スキームの URL が `allowedAboutURLs` allowlist に含まれるかを判定する。
+    /// 比較は `absoluteString.lowercased()` で行い、`ABOUT:Blank` のようなケース差異を吸収する。
+    /// `about:` 以外のスキームを渡された場合は常に `false` を返す（呼び出し側の取り違え検出）。
+    static func isAllowedAboutURL(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "about" else { return false }
+        return allowedAboutURLs.contains(url.absoluteString.lowercased())
+    }
+
     /// WKWebView に設定するモバイル Safari の User-Agent 文字列。
     /// Instagram モバイル Web 版は UA を見てモバイル向け UI / 機能セットに分岐するため、
     /// 「モバイル Safari として正しく見える」フォーマットを維持する必要がある。
@@ -412,9 +428,15 @@ struct InstagramWebView: UIViewRepresentable {
                 return
             }
 
-            // about:blank等は許可
-            if url.scheme == "about" {
-                decisionHandler(.allow)
+            // `about:blank` / `about:srcdoc` のみ許可。`about:config` 等の予期しない
+            // about URL を無条件に通さないよう、明示的な allowlist
+            // (`InstagramWebView.allowedAboutURLs`) で限定する。
+            if url.scheme?.lowercased() == "about" {
+                if InstagramWebView.isAllowedAboutURL(url) {
+                    decisionHandler(.allow)
+                } else {
+                    decisionHandler(.cancel)
+                }
                 return
             }
 
