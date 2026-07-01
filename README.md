@@ -164,7 +164,7 @@ DM への遷移を URL ポリシーでガードする一方、DM 画面そのも
 - **SPA 遷移のフォールバック**: Instagram は History API による soft navigation を多用するため、document が再生成されず `.atDocumentStart` が再発火しない場合があります。`WKNavigationDelegate.didFinish` でも同じ JS を `evaluateJavaScript` で再実行し、SPA 遷移後にも反映されるようにします。注入する JS は固定 ID (`idoa-injected-style`) で重複追加を防ぐため、同一 document への二重注入は安全に no-op になります。
 - **隠す対象**: 以下を `display: none !important` で非表示にします。
   - 下部のナビゲーション（タブ）バー: `div[role="tablist"]`、および「ホーム（`href="/"`）へのリンクを持ち DM リンクを含まない」`nav` 要素
-  - アプリ誘導バナー: クラス名に `banner` / `Banner` を含む要素、App Store（`app-store` / `itunes.apple.com`）へのリンクを含む要素
+  - アプリ誘導バナー: クラス名に `banner` / `Banner` を含む要素、App Store（`app-store` / 旧ドメイン `itunes.apple.com` / 現行ドメイン `apps.apple.com`）へのリンクを含む要素
 - **制約**: あくまで Instagram モバイル Web 版の現行 DOM 構造・クラス名に依存したセレクタです。Instagram 側のマークアップ変更により、隠しきれない要素が現れたり、逆に意図しない要素が隠れたりする可能性があります。これは URL ポリシーのような「ブロック」ではなく、視覚的な整理であることに注意してください（遷移自体は URL ポリシーで別途防いでいます）。
 
 CSS 本体は `InstagramWebView.swift` の `hideUnwantedUICSS` 定数、注入用 JS は `injectStyleJS` 定数にまとまっています。
