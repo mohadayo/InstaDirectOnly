@@ -54,6 +54,14 @@ struct InstagramWebView: UIViewRepresentable {
     /// DM 以外の UI（フィードナビゲーション・アプリ誘導バナー等）を視覚的に隠す CSS。
     /// `WKUserScript(.atDocumentStart)` と `didFinish` 後の `evaluateJavaScript` の
     /// 両方から参照されるため、ここで一元定義する。
+    ///
+    /// App Store リンクの判定について:
+    /// - 旧ドメイン `itunes.apple.com` と現行 `apps.apple.com` の両方をカバーする。
+    /// - Apple は 2019 年に App Store URL を `apps.apple.com` に切り替えており、
+    ///   `itunes.apple.com` はリダイレクトのために残っている旧ドメイン。
+    ///   Instagram モバイル Web 版が現行の `apps.apple.com` リンクで
+    ///   「App でも使えます」バナーを差し込む場合に、旧 selector 単独では
+    ///   隠しきれない。旧 URL が混在するページに備えて両方の selector を残す。
     static let hideUnwantedUICSS: String = """
     /* 下部ナビゲーションバーを非表示 */
     div[role="tablist"],
@@ -64,7 +72,8 @@ struct InstagramWebView: UIViewRepresentable {
     div[class*="banner"],
     div[class*="Banner"],
     a[href*="app-store"],
-    div:has(> a[href*="itunes.apple.com"]) {
+    div:has(> a[href*="itunes.apple.com"]),
+    div:has(> a[href*="apps.apple.com"]) {
         display: none !important;
     }
     """
