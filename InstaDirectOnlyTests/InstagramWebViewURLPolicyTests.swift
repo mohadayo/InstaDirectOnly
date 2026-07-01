@@ -1213,6 +1213,30 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    func test_hideUnwantedUICSS_hidesLegacyItunesAppleComLink() {
+        // App Store リンクの旧ドメイン `itunes.apple.com` を含む要素の非表示 selector
+        // が保持されていること。旧 URL は Apple 側でリダイレクト用に残っており、
+        // 一部の Instagram バナーで参照される可能性があるため引き続きカバーする。
+        // `apps.apple.com` selector 追加時に誤って削除される事故を検知する。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("itunes.apple.com"),
+            "旧 App Store ドメイン (itunes.apple.com) の selector が hideUnwantedUICSS から消えている"
+        )
+    }
+
+    func test_hideUnwantedUICSS_hidesAppsAppleComLink() {
+        // App Store リンクの現行ドメイン `apps.apple.com` を含む要素の非表示 selector
+        // が含まれていること。Apple は 2019 年に App Store URL を
+        // `apps.apple.com` に切り替えており、Instagram モバイル Web 版の
+        // 「App でも使えます」バナーがこの新ドメインを使う場合に必要になる。
+        // 旧 selector (`itunes.apple.com`) 単独では隠しきれないため、
+        // 現行ドメインの selector が必ず含まれることを回帰保証する。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("apps.apple.com"),
+            "現行 App Store ドメイン (apps.apple.com) の selector が hideUnwantedUICSS から消えている"
+        )
+    }
+
     func test_hideUnwantedUICSS_usesImportantToOverrideInlineStyles() {
         // Instagram モバイル Web 側のインラインスタイルや高優先度ルールに勝つため、
         // 非表示 selector は `!important` を伴っている必要がある。
