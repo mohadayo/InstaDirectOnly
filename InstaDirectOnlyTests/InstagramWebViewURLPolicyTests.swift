@@ -408,6 +408,96 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(isAllowedOrUnparseable("chrome://flags/"))
     }
 
+    // MARK: - isAllowedAboutURL / allowedAboutURLs
+
+    func test_allowedAboutURLs_containsBlankAndSrcdoc() {
+        // `WKWebView` が iframe 初期化 (`about:blank`) や `srcdoc` iframe 生成
+        // (`about:srcdoc`) の中継で標準的に使う 2 つの URL のみが `about:`
+        // allowlist に含まれること。他 (`about:config` 等) が誤って混入していないか
+        // も同時に検証する（回帰）。
+        XCTAssertEqual(
+            InstagramWebView.allowedAboutURLs,
+            ["about:blank", "about:srcdoc"]
+        )
+    }
+
+    func test_isAllowedAboutURL_returnsTrueForAboutBlank() {
+        // `about:blank` は WKWebView が iframe 初期化やフラグメント遷移の中継で使う
+        // 標準的な空ドキュメント URL。`decidePolicyFor` で通す設計上、静的判定でも true。
+        let url = URL(string: "about:blank")!
+        XCTAssertTrue(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_returnsTrueForAboutSrcdoc() {
+        // `about:srcdoc` は `<iframe srcdoc>` のソース URL として WebKit が使う。
+        // allowlist に含まれるため、静的判定で true。
+        let url = URL(string: "about:srcdoc")!
+        XCTAssertTrue(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_isCaseInsensitiveAboutBlank() {
+        // `absoluteString.lowercased()` で比較しているため、`ABOUT:Blank` の
+        // ようなケース差異を吸収する（`decidePolicyFor` の実運用で
+        // WKWebView 側の正規化に頼らず静的に安全側に倒す設計）。
+        let url = URL(string: "ABOUT:Blank")!
+        XCTAssertTrue(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsAboutConfig() {
+        // `about:config`（Firefox 由来の設定 URL）は本アプリで発生する余地が無く、
+        // allowlist にも含まれない。将来 WebKit が同 URL を実装しても無条件で
+        // 通らないことを回帰する。
+        let url = URL(string: "about:config")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsAboutNewtab() {
+        // `about:newtab`（一部ブラウザの新規タブ URL）も同様に allowlist 外。
+        let url = URL(string: "about:newtab")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsAboutCache() {
+        // `about:cache`（WebKit のデバッグ画面）も allowlist 外。
+        let url = URL(string: "about:cache")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsHttpsScheme() {
+        // 呼び出し側の取り違え検出。`about:` スキームでない URL を渡した場合は
+        // 常に false を返す（allowlist 上に「about:https://...」等の細工文字列が
+        // 万一含まれていても通さない設計）。
+        let url = URL(string: "https://www.instagram.com/direct/inbox/")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsHttpScheme() {
+        // http スキームも `about:` ではないため false。
+        let url = URL(string: "http://example.com/")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsInstagramCustomScheme() {
+        // ネイティブアプリスキーム (`instagram://`) も `about:` ではないため false。
+        let url = URL(string: "instagram://user?username=evil")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsAboutWithSuffix() {
+        // `about:blank` 直後にサフィックスを付けた文字列 (`about:blankextra` 等) は、
+        // 完全一致比較のため allowlist に含まれず false。SPA 経由で細工された URL 経路
+        // を静的にも塞ぐことを回帰する。
+        let url = URL(string: "about:blankextra")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
+    func test_isAllowedAboutURL_rejectsAboutSrcdocWithFragment() {
+        // `about:srcdoc#anchor` のようにフラグメント付きは完全一致比較で allowlist
+        // 外となる。想定外の派生 URL を無条件に通さない設計を回帰する。
+        let url = URL(string: "about:srcdoc#anchor")!
+        XCTAssertFalse(InstagramWebView.isAllowedAboutURL(url))
+    }
+
     // MARK: - ホスト末尾ドット
 
     func test_rejectsTrailingDotHost() {
