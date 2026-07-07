@@ -1438,6 +1438,97 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         )
     }
 
+    // MARK: - パーセントエンコード済みパストラバーサル (%2E%2E) の拒否
+
+    // `hasPathTraversal` は `URL.path` を経由してセグメント分割するため、
+    // Foundation の `.path` は `%2E` / `%2e` を percent-decode して `.` として返す。
+    // その結果 `..` セグメントが検出され deny される想定だが、実装の書換で
+    // 「そもそも .path を通さない」「リテラル `..` のみ検査する」等の
+    // silent regression が起きても既存テストでは検知できない。
+    // 本セクションはパーセントエンコード変種の deny を明示的に回帰保証する。
+
+    func test_rejectsPercentEncodedParentTraversalUppercase() {
+        // 大文字 `%2E%2E` は `URL.path` で `..` にデコードされ deny されるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/%2E%2E/explore/"))
+    }
+
+    func test_rejectsPercentEncodedParentTraversalLowercase() {
+        // 小文字 `%2e%2e` も同様に `..` へデコードされ deny されるべき。
+        // 大文字と別扱いされる regression（例: `path` を大文字比較しかしない実装）を検知する。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/%2e%2e/explore/"))
+    }
+
+    func test_rejectsPercentEncodedParentTraversalMixedCase() {
+        // 大小混在 `%2E%2e` も等価に扱われるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/%2E%2e/explore/"))
+    }
+
+    func test_rejectsPartialPercentEncodedParentTrailingDot() {
+        // 片方だけデコードした部分エンコード `%2E.` も、
+        // デコード後は `..` セグメントになり deny されるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/%2E./explore/"))
+    }
+
+    func test_rejectsPartialPercentEncodedParentLeadingDot() {
+        // 前半だけリテラル `.` の `.%2E` も、デコード後 `..` になり deny されるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/.%2E/explore/"))
+    }
+
+    func test_rejectsPercentEncodedCurrentDirSegment() {
+        // 単一 `%2E` は `.` にデコードされ、`.` セグメント単独として
+        // `hasPathTraversal` の deny-by-default に該当するはず。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/%2E/inbox/"))
+    }
+
+    func test_rejectsPercentEncodedTraversalTailNoSlash() {
+        // 末尾のパーセントエンコード `..`（末尾スラッシュ無し）も deny されるべき。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/direct/inbox/%2E%2E"))
+    }
+
+    func test_rejectsPercentEncodedTraversalInAccountsLogin() {
+        // ログイン導線経由でも、パーセントエンコードトラバーサルを含めば deny されるべき。
+        XCTAssertFalse(
+            isAllowed("https://www.instagram.com/accounts/login/%2E%2E/%2E%2E/p/abc/")
+        )
+    }
+
+    func test_rejectsMultiplePercentEncodedTraversals() {
+        // 多段のパーセントエンコード `..` も deny されるべき。
+        XCTAssertFalse(
+            isAllowed("https://www.instagram.com/direct/inbox/%2E%2E/%2E%2E/")
+        )
+    }
+
+    func test_rejectsPercentEncodedTraversalInApiV1() {
+        // API パス配下でもパーセントエンコードトラバーサルが deny されるべき。
+        // `/api/v1` は許可されるが、その先の `..` は許可されない。
+        XCTAssertFalse(isAllowed("https://www.instagram.com/api/v1/%2E%2E/users/"))
+    }
+
+    func test_rejectsPercentEncodedTraversalWithQuery() {
+        // クエリ文字列付きのパーセントエンコードトラバーサルも deny されるべき。
+        // クエリ文字列は path 判定に影響しないため、トラバーサル部が優先で deny される。
+        XCTAssertFalse(
+            isAllowed("https://www.instagram.com/direct/%2E%2E/explore/?ref=1")
+        )
+    }
+
+    func test_rejectsPercentEncodedTraversalWithFragment() {
+        // フラグメント (`#...`) 付きのパーセントエンコードトラバーサルも deny されるべき。
+        // Fragment は URL 判定に影響しないため、トラバーサル部が優先で deny される。
+        XCTAssertFalse(
+            isAllowed("https://www.instagram.com/direct/%2E%2E/explore/#top")
+        )
+    }
+
+    func test_rejectsPercentEncodedTraversalCombinedWithLiteralDot() {
+        // リテラル `.` セグメントとパーセントエンコード `..` の組み合わせ。
+        // どちらか一方でも `hasPathTraversal` にヒットする時点で deny される。
+        XCTAssertFalse(
+            isAllowed("https://www.instagram.com/direct/./%2E%2E/inbox/")
+        )
+    }
+
     // MARK: - Helper
 
     private func isAllowed(_ urlString: String) -> Bool {
