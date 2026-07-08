@@ -203,4 +203,153 @@ final class InstagramWebViewConstantsTests: XCTestCase {
             "停止メッセージに『再試行』への案内が含まれていない"
         )
     }
+
+    // MARK: - mobileSafariUserAgent
+    //
+    // Instagram モバイル Web 版は UA を見てモバイル UI / 機能セットに分岐する。
+    // 「モバイル Safari」と誤解なく認識されるフォーマットを維持しないと、
+    // アプリ誘導フルスクリーンページに寄せられたり、`window.open` の挙動が
+    // 変わったりする。UA 文字列全体を完全一致で固定すると iOS バージョン
+    // bump ごとに全テストが赤くなるため、要件を「必須トークンの存在」に
+    // 分解して検証し、フォーマットの根幹だけを回帰させる。
+
+    func test_mobileSafariUserAgent_isNotEmpty() {
+        // 空文字列に誤変更された場合、WKWebView は UA を送らず既定値になり、
+        // Instagram 側のモバイル UI 分岐が壊れる。存在検査として残す。
+        XCTAssertFalse(InstagramWebView.mobileSafariUserAgent.isEmpty)
+    }
+
+    func test_mobileSafariUserAgent_containsSafariToken() {
+        // `Safari/<build>` トークンは UA が「Safari 系ブラウザ」として認識される
+        // 前提。抜けると WebView 判定・WKWebView 判定に落ちるサイトが増える。
+        XCTAssertTrue(
+            InstagramWebView.mobileSafariUserAgent.contains("Safari/"),
+            "UA から `Safari/` トークンが脱落している"
+        )
+    }
+
+    func test_mobileSafariUserAgent_containsMobileToken() {
+        // `Mobile/<build>` トークンはモバイル UI 分岐を有効化する。抜けると
+        // Instagram が PC 版レイアウトを返してくる可能性がある。
+        XCTAssertTrue(
+            InstagramWebView.mobileSafariUserAgent.contains("Mobile/"),
+            "UA から `Mobile/` トークンが脱落している"
+        )
+    }
+
+    func test_mobileSafariUserAgent_containsIPhonePlatform() {
+        // プラットフォーム識別子 `iPhone` が抜けると、Instagram 側が
+        // iPad / Android UI へ寄せる可能性がある。
+        XCTAssertTrue(
+            InstagramWebView.mobileSafariUserAgent.contains("iPhone"),
+            "UA から `iPhone` プラットフォーム識別子が脱落している"
+        )
+    }
+
+    func test_mobileSafariUserAgent_containsVersionToken() {
+        // Safari の慣習として `Version/<safari-version>` を含む。抜けると
+        // 「Safari 以外の WebKit」と判定するサーバに当たった際に UI が崩れる。
+        XCTAssertTrue(
+            InstagramWebView.mobileSafariUserAgent.contains("Version/"),
+            "UA から `Version/` トークンが脱落している"
+        )
+    }
+
+    func test_mobileSafariUserAgent_startsWithMozillaPrefix() {
+        // 実 Safari の UA と同じく `Mozilla/5.0` プレフィックスで始まる。
+        // 抜けると単純な `startsWith('Mozilla')` 型の UA スニッフィングで
+        // 弾かれるサーバに遭遇し得るため、慣習的な先頭を固定しておく。
+        XCTAssertTrue(
+            InstagramWebView.mobileSafariUserAgent.hasPrefix("Mozilla/5.0"),
+            "UA が `Mozilla/5.0` で始まっていない"
+        )
+    }
+
+    // MARK: - hideUnwantedUICSS
+    //
+    // `hideUnwantedUICSS` は `injectStyleJS` の中で JS テンプレートリテラル
+    // (バックティック文字列) の `${...}` として埋め込まれる。CSS 側にバック
+    // ティック `` ` `` や `${` が現れると、生成される JS 全体が構文エラーで
+    // 死に、CSS が挿入されず DM 以外の UI が露出する。プロダクトコードで
+    // 直接エスケープする代わりに、混入をユニットテストで検知することで
+    // 「気づいたら壊れていた」事故を防ぐ。
+
+    func test_hideUnwantedUICSS_isNotEmpty() {
+        // 空文字列に誤変更されると、`<style>` が空タグになり非表示 CSS が
+        // 一切適用されない。DM 以外の UI が丸見えになる回帰の入口。
+        XCTAssertFalse(InstagramWebView.hideUnwantedUICSS.isEmpty)
+    }
+
+    func test_hideUnwantedUICSS_doesNotContainBacktick() {
+        // バックティックが混ざると `injectStyleJS` のテンプレートリテラルを
+        // 途中で終端させ、以降の JS が壊れる。CSS 上バックティックを使う
+        // 必要は無いので、混入即エラーとして固定する。
+        XCTAssertFalse(
+            InstagramWebView.hideUnwantedUICSS.contains("`"),
+            "hideUnwantedUICSS にバックティックが混入している (injectStyleJS の JS テンプレートを破壊する)"
+        )
+    }
+
+    func test_hideUnwantedUICSS_doesNotContainDollarBrace() {
+        // `${` は JS テンプレート補間の開始トークン。CSS 側に紛れると
+        // `injectStyleJS` の中で「未定義の識別子を補間」と解釈され構文エラー。
+        // CSS 上必要性が無いので、混入禁止として固定する。
+        XCTAssertFalse(
+            InstagramWebView.hideUnwantedUICSS.contains("${"),
+            "hideUnwantedUICSS に `${` が混入している (injectStyleJS の JS テンプレート補間を誤発火させる)"
+        )
+    }
+
+    func test_hideUnwantedUICSS_targetsAppStoreLinks() {
+        // 現行 `apps.apple.com` 経由のアプリ誘導バナー selector が生きていること。
+        // Instagram モバイル Web 版が挿入する「App でも使えます」バナーの
+        // 主要 selector を回帰的に固定しておくと、CSS リファクタで
+        // うっかり削除するのを検知できる。
+        XCTAssertTrue(
+            InstagramWebView.hideUnwantedUICSS.contains("apps.apple.com"),
+            "hideUnwantedUICSS から現行 App Store ドメインの selector が脱落している"
+        )
+    }
+
+    // MARK: - injectStyleJS
+    //
+    // 「同一 ID の `<style>` が既に存在する場合は何もしない」冪等性を担保する
+    // 前提として、STYLE_ID が変更されてはならない。また、IIFE で囲むことで
+    // グローバルスコープの汚染を避ける契約も回帰対象。
+
+    func test_injectStyleJS_isNotEmpty() {
+        // 空文字列だと `evaluateJavaScript` が no-op になり、SPA 遷移後の
+        // CSS 再注入が働かなくなる。存在検査として残す。
+        XCTAssertFalse(InstagramWebView.injectStyleJS.isEmpty)
+    }
+
+    func test_injectStyleJS_referencesExpectedStyleId() {
+        // 冪等な style 挿入は `document.getElementById('idoa-injected-style')`
+        // が存在チェックで一致することに依存している。ID 文字列が誤って
+        // 変更されると、SPA 遷移ごとに `<style>` が重複追加されていく。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("'idoa-injected-style'"),
+            "injectStyleJS が想定の STYLE_ID `idoa-injected-style` を参照していない"
+        )
+    }
+
+    func test_injectStyleJS_isWrappedInIIFE() {
+        // グローバルスコープを汚さないよう IIFE で包む契約。
+        // `(function()` の脱落は `STYLE_ID` などのローカル変数を global に露出させ、
+        // 他のスクリプトと衝突する余地を作る。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("(function()"),
+            "injectStyleJS が IIFE で包まれていない (グローバルスコープ汚染の危険)"
+        )
+    }
+
+    func test_injectStyleJS_embedsHideUnwantedUICSS() {
+        // `hideUnwantedUICSS` が JS に展開されて含まれていることを、代表的な
+        // selector (`tablist`) の存在で確認する。CSS 定数の誤挿入経路を
+        // 挙動テストなしで検知できる。
+        XCTAssertTrue(
+            InstagramWebView.injectStyleJS.contains("tablist"),
+            "injectStyleJS に hideUnwantedUICSS の内容が展開されていない"
+        )
+    }
 }
