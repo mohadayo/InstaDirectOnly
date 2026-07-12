@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+contact_links:
+  - name: セキュリティ脆弱性の報告
+    url: https://github.com/mohadayo/InstaDirectOnly/security/advisories/new
+    about: URL allowlist の回避、認証情報の漏洩、任意コード実行など、
+      セキュリティに関わる報告は公開 Issue ではなく Security Advisory 経由でお願いします。
+      詳細は SECURITY.md を参照してください。
