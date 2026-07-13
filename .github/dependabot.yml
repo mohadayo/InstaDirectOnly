@@ -1,0 +1,25 @@
+# Dependabot 設定
+# GitHub Actions で使用するアクションのバージョンを週次で監視する。
+# Swift/Xcode の依存は現状 SwiftPM を使用していないため、
+# 将来 SwiftPM を採用した際は下段に "swift" エコシステムを追加する。
+
+version: 2
+
+updates:
+  # GitHub Actions のバージョン監視
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "mohadayo"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"

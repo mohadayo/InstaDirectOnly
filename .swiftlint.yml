@@ -1,0 +1,92 @@
+# SwiftLint 設定
+# 既存のコードスタイルに合わせた最小構成。
+# 将来 CI で SwiftLint を実行する場合の基準として機能する。
+
+# 検査対象
+included:
+  - InstaDirectOnly
+  - InstaDirectOnlyTests
+
+# 検査除外
+excluded:
+  - InstaDirectOnly.xcodeproj
+  - .build
+  - build
+  - DerivedData
+  - Pods
+
+# デフォルトルールから無効化するもの
+disabled_rules:
+  # 既存の日本語コメント/README により混在するため
+  - todo
+  # SwiftUI の宣言型 DSL では意図的にネストが深くなるため
+  - function_body_length
+
+# デフォルトで無効なオプトインルールから有効化するもの
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - closure_spacing
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - force_unwrapping
+  - implicit_return
+  - literal_expression_end_indentation
+  - operator_usage_whitespace
+  - overridden_super_call
+  - prefer_zero_over_explicit_init
+  - redundant_nil_coalescing
+  - unneeded_parentheses_in_closure_argument
+  - vertical_parameter_alignment_on_call
+
+# 個別ルール設定
+line_length:
+  warning: 140
+  error: 200
+  ignores_urls: true
+  ignores_comments: true
+  ignores_function_declarations: false
+
+type_body_length:
+  warning: 400
+  error: 600
+
+file_length:
+  warning: 800
+  error: 1200
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 50
+    error: 60
+  excluded:
+    - id
+    - at
+    - to
+    - in
+    - on
+    - up
+    - js
+    - wv
+
+type_name:
+  min_length:
+    warning: 3
+    error: 2
+  max_length:
+    warning: 50
+    error: 60
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+nesting:
+  type_level:
+    warning: 3
+
+reporter: "xcode"
