@@ -1,0 +1,8 @@
+# GitHub Code Owners
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+#
+# 各行の左側にファイル・ディレクトリのグロブ、右側に owner (@ユーザ or @org/team) を列挙する。
+# 後方一致でマッチした最後のルールが有効になる。
+
+# デフォルトオーナー: 全ファイルの変更に対して @mohadayo にレビューを要求する
+* @mohadayo
