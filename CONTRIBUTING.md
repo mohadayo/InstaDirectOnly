@@ -6,7 +6,7 @@ InstaDirectOnly への貢献に興味を持っていただきありがとうご�
 
 - macOS + Xcode 15 以降
 - Swift 5.9 以降
-- iOS 15+ をターゲットとします
+- iOS 17+ をターゲットとします（`InstaDirectOnly.xcodeproj` の `IPHONEOS_DEPLOYMENT_TARGET = 17.0` に準拠）
 
 ## 開発フロー
 
