@@ -1,0 +1,60 @@
+# Markdown リンクチェック
+#
+# 目的:
+#   リポジトリ配下の Markdown ファイルに含まれる URL が生存しているかを
+#   定期的に検証し、リンク切れを早期に検知する。
+#
+# 設計上のポイント:
+#   - `pull_request` トリガーを持たないため、既存の PR レビューを
+#     ブロックしない (レビュアーの体験を損ねない)。
+#   - 週次 (月曜 00:00 UTC = JST 09:00) + 手動実行 + `main` への
+#     Markdown 変更 push でのみ実行し、ランナー使用量を最小化。
+#   - Instagram / Apple / GitHub 等は bot に対して 403 / 429 を
+#     返しがちなので、これらは "生存" とみなす。
+name: link-check
+
+on:
+  schedule:
+    # 毎週月曜 00:00 UTC (JST 09:00) に実行
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+      - '.github/workflows/link-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: link-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lychee:
+    name: lychee
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run lychee on Markdown files
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # 対象は Markdown のみ。lychee は Markdown / HTML / テキストの
+          # いずれからも URL を抽出できる。
+          args: >-
+            --verbose
+            --no-progress
+            --accept 200,203,204,206,301,302,304,307,308,403,429
+            --max-concurrency 8
+            --timeout 20
+            --retry-wait-time 5
+            --max-retries 2
+            --exclude-mail
+            './**/*.md'
+          # 検出時にジョブを失敗させる (schedule 起点なので PR には影響しない)
+          fail: true
