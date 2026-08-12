@@ -194,4 +194,6 @@ CSS 本体は `InstagramWebView.swift` の `hideUnwantedUICSS` 定数、注入�
 
 ## ライセンス
 
-このリポジトリのコードについてはリポジトリオーナーの設定に従います。Instagram の利用規約・コンテンツポリシーには各自で従ってください。
+このリポジトリのコードは [MIT License](LICENSE) の下で提供されています。利用・改変・再配布・商用利用が可能です。詳細な条件はリポジトリルートの [`LICENSE`](LICENSE) ファイルを参照してください。
+
+なお本アプリは Instagram のモバイル Web 版を `WKWebView` で表示するクライアントであり、Instagram の利用規約・コンテンツポリシーには各自で従ってください（MIT License は本アプリのコード自体にのみ適用され、Instagram 側のサービスやコンテンツの利用条件を上書きするものではありません）。
