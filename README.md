@@ -103,7 +103,7 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 本アプリは `Coordinator` を `WKUIDelegate` に準拠させ、新規ウィンドウ要求が来た際に以下のように振る舞います：
 
 - URL allowlist を満たす場合 → **同じ `WKWebView` 上でロード**（DM 内のリンクが消えず辿れる）
-- 許可外 URL の場合 → **何もしない**(外部ブラウザを開かない＝ DM 外への離脱導線を作らない)
+- 許可外 URL の場合 → **何もしない**（外部ブラウザを開かない＝ DM 外への離脱導線を作らない）
 
 これにより無反応に見える挙動を解消しつつ、URL ポリシーは維持されます。
 
