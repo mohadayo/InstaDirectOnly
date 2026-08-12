@@ -103,7 +103,7 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 本アプリは `Coordinator` を `WKUIDelegate` に準拠させ、新規ウィンドウ要求が来た際に以下のように振る舞います：
 
 - URL allowlist を満たす場合 → **同じ `WKWebView` 上でロード**（DM 内のリンクが消えず辿れる）
-- 許可外 URL の場合 → **何もしない**（外部ブラウザを開かない＝ DM 外への離脱導線を作らない）
+- 許可外 URL の場合 → **何もしない**(外部ブラウザを開かない＝ DM 外への離脱導線を作らない)
 
 これにより無反応に見える挙動を解消しつつ、URL ポリシーは維持されます。
 
@@ -194,4 +194,6 @@ CSS 本体は `InstagramWebView.swift` の `hideUnwantedUICSS` 定数、注入�
 
 ## ライセンス
 
-このリポジトリのコードについてはリポジトリオーナーの設定に従います。Instagram の利用規約・コンテンツポリシーには各自で従ってください。
+このリポジトリのコードは [MIT License](LICENSE) の下で提供されています。利用・改変・再配布・商用利用が可能です。詳細な条件はリポジトリルートの [`LICENSE`](LICENSE) ファイルを参照してください。
+
+なお本アプリは Instagram のモバイル Web 版を `WKWebView` で表示するクライアントであり、Instagram の利用規約・コンテンツポリシーには各自で従ってください（MIT License は本アプリのコード自体にのみ適用され、Instagram 側のサービスやコンテンツの利用条件を上書きするものではありません）。
