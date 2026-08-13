@@ -1,0 +1,77 @@
+# Stale Issue / PR 管理ワークフロー
+#
+# 目的:
+#   長期間更新のない Issue / Pull Request に対して自動的にラベル付け・
+#   通知を行い、一定期間経過後に自動でクローズする。
+#   個人メンテナが手動で棚卸しする負担を減らし、生きた課題に集中できるようにする。
+#
+# 設計上のポイント:
+#   - Issue と PR で `stale` 判定までの日数を分離 (PR はより短く運用)。
+#   - `exempt-issue-labels` / `exempt-pr-labels` で意図的に長期保留したい
+#     項目 (pinned / security / in-progress など) を除外。
+#   - マイルストーン紐付き Issue / PR も対象外 (計画的作業を尊重)。
+#   - `permissions` は `issues: write` / `pull-requests: write` のみに限定。
+#   - `concurrency` により同時実行を抑止し、API レートリミット消費を抑制。
+#   - 実行回数上限 (`operations-per-run`) を明示し、暴発時の影響を最小化。
+#   - 日次 (UTC 01:30 = JST 10:30) と手動実行の両対応。
+
+name: stale
+
+on:
+  schedule:
+    # 毎日 01:30 UTC (JST 10:30) に実行
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    name: mark-and-close
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Mark and close stale issues / PRs
+        uses: actions/stale@v9
+        with:
+          # ===== Issue =====
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-label: stale
+          stale-issue-message: |
+            この Issue は 60 日間更新がないため、`stale` ラベルを付与しました。
+            引き続き対応が必要な場合はコメントを追加してください。
+            さらに 14 日間更新がなければ自動的にクローズされます。
+          close-issue-message: |
+            長期間更新がなかったため、この Issue を自動的にクローズしました。
+            再開が必要な場合はコメントを添えて再オープンしてください。
+          close-issue-reason: not_planned
+
+          # ===== Pull Request =====
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          stale-pr-label: stale
+          stale-pr-message: |
+            この Pull Request は 30 日間更新がないため、`stale` ラベルを付与しました。
+            レビュー再開の準備が整ったらコメントを追加してください。
+            さらに 14 日間更新がなければ自動的にクローズされます。
+          close-pr-message: |
+            長期間更新がなかったため、この Pull Request を自動的にクローズしました。
+            作業を再開する際は再オープンしてください。
+
+          # ===== 除外設定 =====
+          # メンテナが意図的に保留している / 長期扱いの Issue・PR を除外
+          exempt-issue-labels: 'pinned,security,in-progress,help-wanted,good-first-issue'
+          exempt-pr-labels: 'pinned,security,in-progress,work-in-progress'
+          exempt-all-milestones: true
+
+          # ===== レートリミット対策 =====
+          operations-per-run: 60
+          # 更新日順 (古い順) に処理し、対象の取りこぼしを減らす
+          ascending: true
