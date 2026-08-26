@@ -94,6 +94,24 @@ struct InstagramWebView: UIViewRepresentable {
     })();
     """
 
+    /// `WKWebView.scrollView` に DM チャット向け UX 設定を適用する。
+    ///
+    /// - `keyboardDismissMode = .interactive`: iOS Messages / LINE / WhatsApp 等の
+    ///   主要チャットアプリと同じく、メッセージリストを下方向にスワイプすると
+    ///   キーボードが段階的に閉じる挙動に揃える。既定値 (`.none`) だと入力欄外を
+    ///   タップしないとキーボードが閉じないため、片手操作の往復（打つ → 遡って読む
+    ///   → また打つ）で毎回タップが必要になり煩わしい。
+    /// - `showsHorizontalScrollIndicator = false`: DM 表示は縦スクロールで完結する
+    ///   一方、モバイル Web 側の一時的なレイアウト揺れで横スクロールインジケータが
+    ///   瞬間的に見えることがあり、チャット UI としてノイズになるため常時抑制する。
+    ///
+    /// `WKWebView` を実体化せずに `UIScrollView` を渡すだけでテストできるよう、
+    /// `static` メソッドとして切り出している。
+    static func configureScrollView(_ scrollView: UIScrollView) {
+        scrollView.keyboardDismissMode = .interactive
+        scrollView.showsHorizontalScrollIndicator = false
+    }
+
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         // Cookieを永続化してログイン状態を維持
@@ -122,6 +140,7 @@ struct InstagramWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .black
         webView.scrollView.backgroundColor = .black
+        Self.configureScrollView(webView.scrollView)
 
         // モバイル Safari の User-Agent を設定。文字列は `Self.mobileSafariUserAgent`
         // に集約しており、iOS バージョンの bump はそちらの定数のみを更新する。
