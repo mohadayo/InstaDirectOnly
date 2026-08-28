@@ -130,6 +130,8 @@ Instagram モバイル Web 版のマークアップ変更に追従できてい�
 
 `WKNavigationDelegate` の失敗コールバックは、URL ポリシー起因のキャンセルとネットワーク起因の失敗が同じ経路に流れてきます。両者を区別しないと、許可外 URL をタップしただけで「読み込みに失敗しました」オーバーレイが一瞬表示されてしまうリグレッションが起きます。
 
+> Web Content Process のクラッシュはこの失敗コールバックとは **別経路** で通知されます。専用の自動復帰ロジック（レート制限を含む）は [`CRASH_RECOVERY.md`](./CRASH_RECOVERY.md) を参照してください。
+
 ### 5.1 正常系除外 (`isIgnorableNavigationError`)
 
 `InstagramWebView.isIgnorableNavigationError(_:)` は次のいずれかに該当するエラーを **UI に出さない** ものとして集約判定します。
@@ -154,6 +156,8 @@ Instagram モバイル Web 版のマークアップ変更に追従できてい�
 
 - `webView.url != nil` → `WKWebView.reload()` で **そのページを再試行**（個別 DM スレッドから離脱しない）。
 - `webView.url == nil` → 初回ロードが URL コミット前に失敗したケース。フォールバックとして `dmURL` (`/direct/inbox/`) をロード。
+
+再試行ボタンは `Coordinator.resetCrashRecoveryState()` も併せて呼び、Web Content Process クラッシュのレート制限カウンタをリセットします。詳細は [`CRASH_RECOVERY.md` §4](./CRASH_RECOVERY.md#4-手動再試行との相互作用) を参照してください。
 
 ## 6. テスト戦略
 
@@ -198,3 +202,8 @@ Instagram モバイル Web 版のマークアップ変更に追従できてい�
 - `InstagramWebViewURLPolicyTests` の UA フォーマット検査が通ることを確認
 - README「技術スタック」「User-Agent」節を更新
 - 最小 iOS を上げる場合は `CONTRIBUTING.md` と `README.md`（ビルド節）を同時に更新
+
+### 7.5 Web Content Process クラッシュ復帰の調整
+
+- `InstagramWebView.crashRecoveryWindow` / `crashRecoveryMaxAttempts` / `crashRecoveryGiveUpMessage` の変更手順は [`CRASH_RECOVERY.md` §8](./CRASH_RECOVERY.md#8-拡張ポイント変更箇所チェックリスト) を一次情報とする
+- 復帰先 URL 判定 (`urlToReloadAfterContentProcessTermination`) を変更する場合は §3 の URL ポリシーとの整合性を確認
