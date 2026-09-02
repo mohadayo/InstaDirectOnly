@@ -352,4 +352,87 @@ final class InstagramWebViewConstantsTests: XCTestCase {
             "injectStyleJS に hideUnwantedUICSS の内容が展開されていない"
         )
     }
+
+    // MARK: - webKitErrorDomain
+    //
+    // `WKWebView` が内部的に使う `WebKitErrorDomain` 文字列は Apple 公開ヘッダーに
+    // シンボルが無いため、`InstagramWebView.webKitErrorDomain` にハードコードして
+    // `isIgnorableNavigationError(_:)` の `(error as NSError).domain` との比較に
+    // 使っている。文字列が誤って書き換えられる（例: 末尾空白、typo、`WebKit` の
+    // ケース違い）と、比較が全て不成立になり、ポリシー由来の無害な中断が
+    // ユーザ向けエラーオーバーレイに漏れ出してしまう。`InstagramWebViewURLPolicyTests`
+    // 側の挙動テストは同じ `webKitErrorDomain` 定数を経由しているため、
+    // 「定数と挙動が同時に壊れる」ような場合は挙動テストで検知しづらい。
+    // ここで「定数の中身そのもの」を独立にアサートしておく。
+
+    func test_webKitErrorDomain_isNotEmpty() {
+        // 空文字列に誤変更されると、`isIgnorableNavigationError` の domain 比較が
+        // 全て不成立になり、ポリシー中断由来のエラーが常にオーバーレイへ出る。
+        XCTAssertFalse(InstagramWebView.webKitErrorDomain.isEmpty)
+    }
+
+    func test_webKitErrorDomain_exactlyMatchesAppleUnpublishedString() {
+        // Apple の非公開シンボルと同じ文字列 `WebKitErrorDomain` であること。
+        // 末尾空白 (`"WebKitErrorDomain "`) や lower/upper ケース違い
+        // (`"webkitErrorDomain"`) 等の微妙な誤変更を完全一致で検出する。
+        XCTAssertEqual(InstagramWebView.webKitErrorDomain, "WebKitErrorDomain")
+    }
+
+    // MARK: - ignorableWebKitErrorCodes
+    //
+    // `decidePolicyFor(.cancel)` や許可外スキーム到達などで `WKWebView` 自身が
+    // 発火する「無視して問題ないエラー」コード集合。
+    // - `101`: `WebKitErrorCannotShowURL`
+    // - `102`: `WebKitErrorFrameLoadInterruptedByPolicyChange`
+    //
+    // ここに `0` や汎用コード (`-999` = `NSURLErrorCancelled` 相当など) が誤って
+    // 追加されると、本来通知すべき失敗まで無視され「無反応な UI」として現れる。
+    // 逆に `101` / `102` のいずれかが脱落すると、ポリシー由来の無害な中断が
+    // エラーオーバーレイに漏れ出す。両方向の事故を回帰する。
+
+    func test_ignorableWebKitErrorCodes_isNotEmpty() {
+        // 空集合になると `isIgnorableNavigationError` の WebKit 経路の判定が
+        // 常に false になり、`decidePolicyFor(.cancel)` 由来の無害な中断が
+        // 全てエラーオーバーレイに漏れ出す。存在検査として残す。
+        XCTAssertFalse(InstagramWebView.ignorableWebKitErrorCodes.isEmpty)
+    }
+
+    func test_ignorableWebKitErrorCodes_containsCannotShowURL_101() {
+        // `101` (`WebKitErrorCannotShowURL`) は、`decidePolicyFor(.cancel)` 後に
+        // 直後 `dmURL` への再ロードで上書きされるため無害。集合から脱落すると
+        // 許可外 URL ブロック直後に赤いエラーオーバーレイが一瞬出る。
+        XCTAssertTrue(
+            InstagramWebView.ignorableWebKitErrorCodes.contains(101),
+            "ignorableWebKitErrorCodes から 101 (WebKitErrorCannotShowURL) が脱落している"
+        )
+    }
+
+    func test_ignorableWebKitErrorCodes_containsFrameLoadInterruptedByPolicyChange_102() {
+        // `102` (`WebKitErrorFrameLoadInterruptedByPolicyChange`) は、
+        // `decidePolicyFor(.cancel)` によるポリシー中断そのもの。集合から
+        // 脱落すると、DM 外リンクをタップした瞬間にエラーオーバーレイが出る。
+        XCTAssertTrue(
+            InstagramWebView.ignorableWebKitErrorCodes.contains(102),
+            "ignorableWebKitErrorCodes から 102 (WebKitErrorFrameLoadInterruptedByPolicyChange) が脱落している"
+        )
+    }
+
+    func test_ignorableWebKitErrorCodes_doesNotContainGenericOrRealFailureCodes() {
+        // ユーザに通知すべき代表的な失敗コードが誤って allowlist に混入していないこと。
+        // - `0`: 未初期化 / 汎用値。混入すると無害なコードが `.domain == webKitErrorDomain`
+        //        かつ `.code == 0` として広範に無視されうる。
+        // - `-999` (`NSURLErrorCancelled`): ドメインが異なるとはいえ、コード衝突を避け
+        //        る意味で混入を禁止する。
+        // - `500` / `404` / `-1001` (`NSURLErrorTimedOut`) 等の一般的な失敗コード:
+        //        WebKit 側では該当しないが、慣習的に「よくある番号」を弾いておく
+        //        ことで、誤って `[100, 101, 102, ...]` のような広範囲を書いてしまった
+        //        場合のスモーク検知に効く。
+        let disallowedCodes: [Int] = [0, -1, 100, 200, 404, 500, -999, -1001]
+        for code in disallowedCodes {
+            XCTAssertFalse(
+                InstagramWebView.ignorableWebKitErrorCodes.contains(code),
+                "ignorableWebKitErrorCodes に想定外コード \(code) が混入している"
+            )
+        }
+    }
 }
