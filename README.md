@@ -2,6 +2,8 @@
 
 Instagram のダイレクトメッセージ（DM）機能だけを使うためのシンプルな iOS アプリ。フィード・リール・発見タブ・ショッピング誘導など、DM 以外のすべての導線をブロックし、メッセージのやり取りに集中できる UI を提供します。
 
+> **詳細ドキュメント**: 実装・運用の詳細ドキュメントは [`docs/`](docs/README.md) 配下（アーキテクチャ / クラッシュ復帰 / FAQ / 用語集 / テスト / トラブルシューティング）にまとめてあります。
+
 ## 特徴
 
 - **DM だけにアクセス**: 起動と同時に `https://www.instagram.com/direct/inbox/` を開く
@@ -38,6 +40,8 @@ Instagram のダイレクトメッセージ（DM）機能だけを使うため�
 
 > 補足: `isAllowedURL` は `static` メソッドなので、テストは UI を起動せずに URL 文字列を渡して判定結果のみを検証します（ネットワークや WebView の実体は不要）。新しい allowlist のルールを追加・変更した際は、このテストに対応するケースを追加してください。
 
+Xcode プロジェクトへのテストターゲット追加手順や、テストが検証している境界条件のより詳細な概要は [`docs/TESTING.md`](docs/TESTING.md) にまとめてあります。
+
 ## アーキテクチャ
 
 | ファイル | 役割 |
@@ -45,6 +49,8 @@ Instagram のダイレクトメッセージ（DM）機能だけを使うため�
 | `InstaDirectOnly/InstaDirectOnlyApp.swift` | アプリのエントリポイント |
 | `InstaDirectOnly/ContentView.swift` | ローディング・エラーオーバーレイを含むルートビュー |
 | `InstaDirectOnly/InstagramWebView.swift` | `WKWebView` を SwiftUI でラップ。URL フィルタと CSS 注入を担当 |
+
+構成要素間の依存関係やイベントフロー、`Coordinator` の役割分担など、より深いアーキテクチャ解説は [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) を参照してください。用語の定義は [`docs/GLOSSARY.md`](docs/GLOSSARY.md) にまとめています。
 
 ## User-Agent
 
@@ -117,6 +123,8 @@ URL ポリシーの境界条件は `InstaDirectOnlyTests/InstagramWebViewURLPoli
 
 上記いずれにも当てはまらない通信失敗・TLS エラー等の本物のエラーは、引き続きオーバーレイで報告します。これにより、許可外 URL を踏んだ際に「読み込みに失敗しました」オーバーレイが一瞬表示されてしまうリグレッションを防いでいます。
 
+WKWebView のコンテンツプロセスがクラッシュした際の自動復帰ロジック（試行回数・時間ウィンドウ・ユーザ手動再試行時のリセット挙動）は [`docs/CRASH_RECOVERY.md`](docs/CRASH_RECOVERY.md) に仕様レベルでまとめています。
+
 #### ユーザー向けエラーメッセージのマッピング
 
 `Error.localizedDescription` は端末ロケールやエラー種別によっては英語のまま返ることがあり（例: "The Internet connection appears to be offline."）、エンドユーザーには不親切です。`InstagramWebView.userFriendlyErrorMessage(for:)` で代表的な `NSURLErrorDomain` コードを以下のように日本語メッセージへ寄せています：
@@ -170,6 +178,8 @@ DM への遷移を URL ポリシーでガードする一方、DM 画面そのも
 CSS 本体は `InstagramWebView.swift` の `hideUnwantedUICSS` 定数、注入用 JS は `injectStyleJS` 定数にまとまっています。
 
 ## トラブルシューティング（FAQ）
+
+以下は代表的な症状のみを扱います。より網羅的なユーザ向け FAQ は [`docs/FAQ.md`](docs/FAQ.md) に、開発者・運用者向けの切り分け手順は [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) にまとめてあります。
 
 - **DM 以外の UI（タブバーやバナー）が一瞬／一部表示される**
   CSS は `WKUserScript(.atDocumentStart)` でドキュメント生成直後に注入されるため、初回レイアウト前にルールが適用されます。とはいえ Instagram 側のレンダリング戦略（クライアントサイドで動的生成されるツリー等）によっては、ごく短時間だけ要素が見える場合があります。また上記「制約」の通り、Instagram の DOM 変更でセレクタが追従できていない場合は隠れないことがあります。いずれも遷移そのものは URL ポリシーでブロックされるため、DM 以外の画面へ実際に移動することはありません。
