@@ -1,0 +1,37 @@
+# -----------------------------------------------------------------------------
+# Citation File Format (CFF) 1.2.0
+#   GitHub がこのファイルを認識するとリポジトリのサイドバーに
+#   「Cite this repository」ボタンが表示され、APA / BibTeX 形式の引用文字列
+#   を自動生成する。
+#
+#   - 仕様:   https://citation-file-format.github.io/
+#   - GitHub: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files
+#
+#   フォーマット互換性のためコメント以外はすべて英語 ASCII / 数値で記述する
+#   (`abstract` は英語で記載)。日本語での説明は README.md 側に集約する。
+# -----------------------------------------------------------------------------
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "InstaDirectOnly"
+abstract: >-
+  A minimal iOS client that opens only Instagram Direct Messages in a
+  WKWebView. Non-DM navigation targets (feed, reels, explore, shopping,
+  external browsers) are blocked by a strict URL allowlist, and the
+  remaining UI is trimmed via CSS injection so users can focus on
+  messaging.
+authors:
+  - given-names: "moha"
+    alias: "mohadayo"
+repository-code: "https://github.com/mohadayo/instadirectonly"
+url: "https://github.com/mohadayo/instadirectonly"
+license: MIT
+keywords:
+  - ios
+  - swift
+  - swiftui
+  - wkwebview
+  - instagram
+  - direct-message
+  - dm
+date-released: "2026-01-01"
