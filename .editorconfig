@@ -1,0 +1,37 @@
+# EditorConfig — https://editorconfig.org/
+#
+# InstaDirectOnly リポジトリのエディタ設定。
+# Xcode 以外のエディタ (VSCode / Cursor / JetBrains AppCode 等) で
+# 開いた場合でも、Xcode デフォルトのフォーマット (4スペース・LF・末尾改行)
+# を自動で揃えるための最小構成。
+#
+# 既存の Swift コードには変更を加えず、今後のコミットで意図しない
+# インデント差分・末尾空白が混入するのを防ぐ目的の設定である。
+
+root = true
+
+# 全ファイル共通のデフォルト
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Swift ソース (Xcode デフォルトに合わせて 4 スペース)
+[*.swift]
+indent_style = space
+indent_size = 4
+
+# YAML / Markdown / JSON / TOML は 2 スペースが慣例
+[*.{yml,yaml,md,json,toml}]
+indent_size = 2
+
+# Makefile はタブ必須 (POSIX 準拠)
+[{Makefile,makefile,GNUmakefile}]
+indent_style = tab
+
+# バッチファイルは CRLF が慣例
+[*.{bat,cmd}]
+end_of_line = crlf
