@@ -22,6 +22,7 @@
 ### リリース・運用
 
 - **[RELEASE.md](./RELEASE.md)** — 次のバージョンを切る際の手順（SemVer に基づくバージョン採番、`CHANGELOG.md` の `[Unreleased]` → 新バージョン節への書き換え、Xcode `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` の bump、注釈付き Git タグ、GitHub Releases 作成、ホットフィックス / ロールバック時の考え方）を一次情報として集約。
+- **[DEV_COMMANDS.md](./DEV_COMMANDS.md)** — リポジトリ直下 [`Makefile`](../Makefile) が提供する `build` / `test` / `lint` / `format` / `setup` などの開発タスクと上書き可能な変数（`DESTINATION` / `CONFIG` など）を表形式でまとめた開発コマンドリファレンス。初回セットアップ〜 PR 前チェックまでの典型ワークフローも掲載。
 
 ## その他のリファレンス
 
