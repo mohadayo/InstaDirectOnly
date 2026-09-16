@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 @testable import InstaDirectOnly
 
@@ -1527,6 +1528,41 @@ final class InstagramWebViewURLPolicyTests: XCTestCase {
         XCTAssertFalse(
             isAllowed("https://www.instagram.com/direct/./%2E%2E/inbox/")
         )
+    }
+
+    // MARK: - configureScrollView
+
+    // `InstagramWebView.configureScrollView(_:)` は `WKWebView` を実体化せずに
+    // `UIScrollView` を渡すだけでテストできるよう、わざわざ `static` メソッドとして
+    // 切り出されている（実装側のコメント参照）。以下はその意図に沿った回帰テスト。
+
+    func test_configureScrollView_setsInteractiveKeyboardDismissMode() {
+        // チャット UI として、メッセージ欄外を下スワイプした際に段階的にキーボードが
+        // 閉じてほしい。既定値 `.none` のままだと入力欄外を明示タップしないと
+        // キーボードが閉じず、片手操作の往復が煩わしくなるため、
+        // `.interactive` に設定されることを回帰する。
+        let scrollView = UIScrollView()
+        InstagramWebView.configureScrollView(scrollView)
+        XCTAssertEqual(scrollView.keyboardDismissMode, .interactive)
+    }
+
+    func test_configureScrollView_hidesHorizontalScrollIndicator() {
+        // DM 表示は縦スクロールで完結する一方、モバイル Web 側の一時的な
+        // レイアウト揺れで横スクロールインジケータが瞬間的に見えることがあり、
+        // チャット UI としてノイズになるため常時抑制されることを回帰する。
+        let scrollView = UIScrollView()
+        InstagramWebView.configureScrollView(scrollView)
+        XCTAssertFalse(scrollView.showsHorizontalScrollIndicator)
+    }
+
+    func test_configureScrollView_doesNotChangeVerticalScrollIndicator() {
+        // 縦スクロールインジケータの表示可否は `configureScrollView` の
+        // 変更対象ではない。既定値（true）のまま維持されることを検証し、
+        // 将来のリファクタで意図しない副作用が紛れ込んだ場合に検知できるようにする。
+        let scrollView = UIScrollView()
+        XCTAssertTrue(scrollView.showsVerticalScrollIndicator)
+        InstagramWebView.configureScrollView(scrollView)
+        XCTAssertTrue(scrollView.showsVerticalScrollIndicator)
     }
 
     // MARK: - Helper
