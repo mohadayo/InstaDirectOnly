@@ -1,0 +1,37 @@
+# typos による誤検知抑制のための設定。
+#
+# `crate-ci/typos` は英語辞書ベースのスペルチェッカで、既定辞書は米式綴りを
+# 標準としている。iOS/Web 領域の技術用語や、テスト側で意図的に採用した
+# 別綴り (`Unparseable` = URL パース不能を示す造語) は誤検知になるため
+# ここで allowlist する。
+#
+# 追加時は「なぜ辞書に無いのか」を 1 行コメントで残すこと。
+# （例: 商標名・別綴りが標準的・独自造語）
+
+[default.extend-identifiers]
+# `Foundation.URL(string:)` が nil を返した場合を「Unparseable」と表現している
+# テストヘルパー識別子。ソフトウェア工学上は Unparseable / Unparsable 両綴りとも
+# 一般的だが、本プロジェクトでは前者に統一してある。
+isAllowedOrUnparseable = "isAllowedOrUnparseable"
+
+[default.extend-words]
+# 上に同じ。識別子外（コメント等）でも Unparseable 表記を許容する。
+Unparseable = "Unparseable"
+unparseable = "unparseable"
+
+[files]
+# バイナリ・Xcode 生成物・辞書 pack はチェック対象外。
+extend-exclude = [
+    "*.xcassets",
+    "*.xcworkspace",
+    "*.xcodeproj/project.pbxproj",
+    "*.xcodeproj/xcshareddata",
+    "*.xcodeproj/xcuserdata",
+    "*.pbxproj",
+    "*.storyboard",
+    "*.xib",
+    "*.plist",
+    "*.lock",
+    "Package.resolved",
+    "CHANGELOG.md",
+]

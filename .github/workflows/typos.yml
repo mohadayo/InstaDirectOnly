@@ -1,0 +1,45 @@
+# ソースコード・ドキュメントに対するスペルチェック
+#
+# 目的:
+#   README / CHANGELOG / CONTRIBUTING / SECURITY / SUPPORT / docs 配下、および
+#   Swift ソースコード内のコメントや識別子上の typo を PR / push 時点で早期検知する。
+#   既存の actionlint (YAML) / link-check (Markdown リンク) と役割は独立しており、
+#   スペル観点のみを担う軽量ジョブとして走らせる。
+#
+# 設計上のポイント:
+#   - `crate-ci/typos-action` はプリビルドバイナリを実行するのみで postinstall や
+#     ネットワークアクセスを追加で必要としない。
+#   - 設定は `.typos.toml` に集約し、iOS/Web 領域の技術用語（別綴り含む）や
+#     Xcode 生成物パスを allowlist する。
+#   - 権限は `contents: read` のみに限定（`security-events` などは付与しない）。
+#   - `concurrency` により同一 ref での多重実行を抑止し、ランナー使用量を節約。
+
+name: typos
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: typos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typos:
+    name: typos
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run typos
+        uses: crate-ci/typos@v1.29.4
+        with:
+          config: ./.typos.toml
