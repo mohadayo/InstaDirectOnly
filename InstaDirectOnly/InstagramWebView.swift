@@ -6,7 +6,11 @@ import WebKit
 /// `webView` に加えて、ContentView 側の「再試行」処理から `Coordinator` の状態
 /// （連続クラッシュ計測のリセット等）を呼び出せるように `coordinator` 参照も持つ。
 /// 両方とも `weak` で保持し、UIViewRepresentable の解体に追従して自動的に nil 化する。
-class WebViewRef {
+///
+/// `final` を付与しているのは、サブクラス化されるユースケースが存在せず、
+/// dynamic dispatch を避けて意図せぬ継承事故（テストダブルによる weak 参照の
+/// 挙動改変等）を封じるため。派生クラスが必要になった時点で外して構わない。
+final class WebViewRef {
     weak var webView: WKWebView?
     weak var coordinator: InstagramWebView.Coordinator?
 }
@@ -406,7 +410,11 @@ struct InstagramWebView: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    /// `WKNavigationDelegate` / `WKUIDelegate` の実装。
+    /// `final` を付与しているのは、サブクラス化されるユースケースが存在せず、
+    /// dynamic dispatch を避けて意図せぬ継承事故を封じるため。
+    /// 派生クラスが必要になった時点で外して構わない。
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let parent: InstagramWebView
         private var hasCompletedInitialLoad = false
         /// `WKWebView.estimatedProgress` の KVO 観測トークン。
