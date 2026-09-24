@@ -1,5 +1,12 @@
 # InstaDirectOnly
 
+[![Actionlint](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/actionlint.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/actionlint.yml)
+[![Link Check](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/link-check.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/link-check.yml)
+[![Typos](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/typos.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/typos.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Swift](https://img.shields.io/badge/swift-5.9+-fa7343.svg?logo=swift&logoColor=white)](InstaDirectOnly/)
+[![iOS](https://img.shields.io/badge/iOS-17+-black.svg?logo=apple&logoColor=white)](InstaDirectOnly/)
+
 Instagram のダイレクトメッセージ（DM）機能だけを使うためのシンプルな iOS アプリ。フィード・リール・発見タブ・ショッピング誘導など、DM 以外のすべての導線をブロックし、メッセージのやり取りに集中できる UI を提供します。
 
 > **詳細ドキュメント**: 実装・運用の詳細ドキュメントは [`docs/`](docs/README.md) 配下（アーキテクチャ / クラッシュ復帰 / FAQ / 用語集 / テスト / トラブルシューティング）にまとめてあります。
@@ -82,7 +89,7 @@ Instagram ドメイン内で許可されるパス（**完全一致もしくは `
 
 - `/direct`, `/direct/*`（DM）
 - `/accounts/login`, `/accounts/onetap`, `/accounts/emailsignup`（ログイン）
-- `/accounts/logout`, `/accounts/logout/*`（ログアウト導線・`/accounts/logout/ajax/` 等の POST も含む）
+- `/accounts/logout`, `/accounts/logout/*`(ログアウト導線・`/accounts/logout/ajax/` 等の POST も含む）
 - `/accounts/password/reset`, `/accounts/password/reset/*`（「パスワードを忘れた」からの再設定フロー。メール内リンクの `confirm/...` も通過）
 - `/challenge`, `/challenge/*`（本人確認）
 - `/api/v1`, `/api/v1/*`, `/oauth`, `/oauth/*`（内部 API）
