@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Mark and close stale issues / PRs
-        uses: actions/stale@v9
+        uses: actions/stale@v11
         with:
           # ===== Issue =====
           days-before-issue-stale: 60
