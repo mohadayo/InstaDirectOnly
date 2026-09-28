@@ -1,0 +1,34 @@
+# Dependabot 設定
+#
+# 目的:
+#   .github/workflows/ 配下で使用する GitHub Actions のバージョンを
+#   継続的に追跡・更新し、脆弱性修正や非推奨リリース警告の反映漏れを防ぐ。
+#
+# 設計上のポイント:
+#   - 対象は `github-actions` エコシステムのみ。Swift Package Manager
+#     依存が空のため `swift` エコシステムは登録しない (将来 SPM 依存を
+#     追加した際に別途登録する)。
+#   - 実行間隔は weekly。低頻度リリースの Action が多いためこの粒度が妥当。
+#   - コミットプレフィックスは既存のコミット規約 (`chore:` / `feat:` / `fix:`
+#     など) に合わせて `chore` を使用。
+#   - PR には `dependencies` / `ci` ラベルを付与し、ステータス把握を容易にする。
+#   - `open-pull-requests-limit` はレビュー滞留を避けるため 5 に制限。
+#
+# 参考: https://docs.github.com/ja/code-security/dependabot
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "ci"
