@@ -1,0 +1,90 @@
+# GitHub Releases 自動生成リリースノート設定
+#
+# 目的:
+#   GitHub Releases 画面の "Generate release notes" ボタンで作成される
+#   リリースノート下書きを、`CHANGELOG.md` (Keep a Changelog v1.1.0 準拠)
+#   の見出し構造とできる限り揃える。手書きの `CHANGELOG.md` を補助する
+#   位置づけで、リリース担当者がコピー&ペースト・編集しやすい形にする。
+#
+# 設計上のポイント:
+#   - カテゴリ順序は原則 `CHANGELOG.md` と同じ (Added / Changed /
+#     Deprecated / Removed / Fixed / Security)。先頭に `Breaking Changes`
+#     を置き、互換性影響を目立たせる。末尾に Dependencies / CI /
+#     Documentation / Tests / Other Changes を配置。
+#   - Dependabot (`.github/dependabot.yml`) が付与する `dependencies` /
+#     `ci` ラベルは専用カテゴリへ吸収し、本体機能カテゴリのノイズを減らす。
+#   - Conventional Commits に合わせたラベル (`feat` / `fix` / `docs` /
+#     `refactor` / `test` / `chore` / `perf` 等) を広めに受け、将来の
+#     ラベル運用拡張に追従しやすくする。
+#   - 最後に `*` catch-all の `Other Changes` を置き、未分類 PR が
+#     漏れないようにする。
+#   - `exclude.labels` でリリースノートに載せたくない PR / 自動ラベルを除外。
+#
+# 参考:
+#   https://docs.github.com/ja/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+  exclude:
+    labels:
+      - "skip-changelog"
+      - "no-changelog"
+      - "duplicate"
+      - "invalid"
+      - "wontfix"
+      - "question"
+  categories:
+    - title: "Breaking Changes"
+      labels:
+        - "breaking"
+        - "breaking-change"
+        - "semver-major"
+    - title: "Security"
+      labels:
+        - "security"
+        - "vulnerability"
+    - title: "Added"
+      labels:
+        - "feat"
+        - "feature"
+        - "enhancement"
+        - "added"
+    - title: "Changed"
+      labels:
+        - "refactor"
+        - "perf"
+        - "performance"
+        - "changed"
+        - "change"
+    - title: "Deprecated"
+      labels:
+        - "deprecated"
+        - "deprecation"
+    - title: "Removed"
+      labels:
+        - "removed"
+        - "removal"
+    - title: "Fixed"
+      labels:
+        - "fix"
+        - "bug"
+        - "bugfix"
+        - "fixed"
+    - title: "Documentation"
+      labels:
+        - "docs"
+        - "documentation"
+    - title: "Tests"
+      labels:
+        - "test"
+        - "tests"
+    - title: "Dependencies"
+      labels:
+        - "dependencies"
+    - title: "CI"
+      labels:
+        - "ci"
+        - "build"
+        - "chore"
+    - title: "Other Changes"
+      labels:
+        - "*"
