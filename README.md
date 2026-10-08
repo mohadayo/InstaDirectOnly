@@ -33,15 +33,15 @@ Instagram のダイレクトメッセージ（DM）機能だけを使うため�
 
 ## テストの実行
 
-`InstaDirectOnlyTests/InstagramWebViewURLPolicyTests.swift` に、URL allowlist（`InstagramWebView.isAllowedURL`）の境界条件を網羅したユニットテストが含まれています。スキームの allowlist、ホスト/パスの完全一致・サブドメイン判定、偽装ホスト（userinfo・lookalike ドメイン）の拒否、大文字小文字やポート・クエリ・フラグメントの正規化などを検証します。
+`InstaDirectOnlyTests/` 配下にユニットテストが置かれています。代表例として `InstagramWebViewURLPolicyTests.swift` は URL allowlist（`InstagramWebView.isAllowedURL`）の境界条件（スキームの allowlist、ホスト/パスの完全一致・サブドメイン判定、偽装ホスト〈userinfo・lookalike ドメイン〉の拒否、大文字小文字やポート・クエリ・フラグメントの正規化など）を網羅しており、ほかに `InstagramWebViewConstantsTests.swift` / `InstagramWebViewScrollViewConfigTests.swift` / `UserFriendlyErrorMessageTests.swift` / `WebViewRefTests.swift` が UA 定数・ScrollView 設定・ユーザー向けエラーメッセージマッピング・`WebViewRef` の挙動を検証します。
 
-> **注意**: 現状このテストファイルは `InstaDirectOnly.xcodeproj` に **テストターゲットとして登録されていません**。そのため、チェックアウト直後に `⌘U` を押してもテストは実行されません。下記の手順で一度だけテストターゲットを追加してください。
+> **注意**: 現状これらのテストファイルは `InstaDirectOnly.xcodeproj` に **テストターゲットとして登録されていません**。そのため、チェックアウト直後に `⌘U` を押してもテストは実行されません。下記の手順で一度だけテストターゲットを追加してください。
 
 ### テストターゲットを追加して実行する
 
 1. Xcode で `InstaDirectOnly.xcodeproj` を開く。
 2. メニューの **File ▸ New ▸ Target…** から **Unit Testing Bundle** を選択して追加する（Product Name を `InstaDirectOnlyTests`、Target to be Tested を `InstaDirectOnly` に設定）。
-3. 自動生成されたサンプルテストファイルは削除し、既存の `InstaDirectOnlyTests/InstagramWebViewURLPolicyTests.swift` をそのテストターゲットの Target Membership に含める（ファイルインスペクタの「Target Membership」で新規テストターゲットにチェック）。
+3. 自動生成されたサンプルテストファイルは削除し、既存の `InstaDirectOnlyTests/` 配下の **`*.swift` を全て** そのテストターゲットの Target Membership に含める（ファイルインスペクタの「Target Membership」で新規テストターゲットにチェック）。現時点では `InstagramWebViewConstantsTests.swift` / `InstagramWebViewScrollViewConfigTests.swift` / `InstagramWebViewURLPolicyTests.swift` / `UserFriendlyErrorMessageTests.swift` / `WebViewRefTests.swift` の 5 本で、ここで取りこぼすと `⌘U` では静かに検証が欠落するため漏れなくチェックすること。
 4. テストはホストアプリのシンボルへ `@testable import InstaDirectOnly` でアクセスするため、テストターゲットの **Host Application** が `InstaDirectOnly` になっていることを確認する。
 5. `⌘U`（Product ▸ Test）でテストを実行する。
 
