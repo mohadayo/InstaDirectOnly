@@ -143,7 +143,7 @@ WKWebView のコンテンツプロセスがクラッシュした際の自動復�
 | `NSURLErrorNetworkConnectionLost` | 通信が切断されました。再試行してください。 |
 | `NSURLErrorCannotFindHost` / `NSURLErrorCannotConnectToHost` / `NSURLErrorDNSLookupFailed` | サーバに接続できませんでした。電波状況を確認して再試行してください。 |
 | `NSURLErrorSecureConnectionFailed` 系（証明書系・`NSURLErrorAppTransportSecurityRequiresSecureConnection` 含む） | 安全な接続を確立できませんでした。時間をおいて再試行してください。 |
-| `NSURLErrorNetworkAuthenticationRequired`(公衆 Wi-Fi の Captive Portal 等） | ネットワーク認証が必要です。公衆 Wi-Fi のログイン画面をブラウザで開いて認証を完了してから再試行してください。 |
+| `NSURLErrorNetworkAuthenticationRequired`（公衆 Wi-Fi の Captive Portal 等） | ネットワーク認証が必要です。公衆 Wi-Fi のログイン画面をブラウザで開いて認証を完了してから再試行してください。 |
 | `NSURLErrorUserAuthenticationRequired`（サーバ／プロキシ側の認証要求） | 認証が必要です。一度ログアウトして再ログインしてから再試行してください。 |
 | `NSURLErrorDataNotAllowed`（アプリにモバイル通信が許可されていない） | このアプリにモバイル通信の使用が許可されていません。設定 > モバイル通信からアプリを許可するか、Wi-Fi に接続してください。 |
 | `NSURLErrorInternationalRoamingOff`（海外ローミング無効） | 海外ローミングが無効です。設定 > モバイル通信 > データローミングを確認するか、Wi-Fi に接続してください。 |
