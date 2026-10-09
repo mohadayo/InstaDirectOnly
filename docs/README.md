@@ -29,6 +29,7 @@
 
 - **[ROADMAP.md](./ROADMAP.md)** — 「独自バックエンドを持たない」「DM だけに集中する」「URL allowlist は deny-by-default」といった **設計原則** と、それに基づく短期 (Now) / 中期 (Next) / 長期 (Later) の取り組み、そして **明示的にスコープ外とする項目**（独自バックエンド導入・非 DM 機能の追加・ネイティブ再実装など）を一次リファレンスとして集約。Issue / PR で散在しがちなスコープ判断の根拠を後から辿れる形にまとめている。
 - **[ACCESSIBILITY.md](./ACCESSIBILITY.md)** — iOS アプリとしての **アクセシビリティ方針** (VoiceOver / Dynamic Type / Reduce Motion / コントラスト) と、WebView 固有の制約、SwiftUI / UIKit での実装チェックリスト、PR レビュー時の確認観点をまとめたガイド。新規に UI を追加・変更する際の参照先。
+- **[PRIVACY.md](./PRIVACY.md)** — **プライバシー方針** を実装仕様レベルで集約したドキュメント。データフロー（アプリ ↔ Instagram ↔ `WKWebsiteDataStore`）・収集/保存されるデータ種別と保存先・サードパーティ送信の有無（解析 / 広告 / クラッシュレポーター SDK を一切組み込まない宣言）・iOS 権限 (Info.plist) の未取得リスト・データ削除手順・URL allowlist によるデータ漏えい防止方針を記載。プライバシーに関わる変更を伴う PR は本ドキュメントと `../README.md` の「プライバシー」節の両方を同じ PR で更新する運用。
 
 ## その他のリファレンス
 
