@@ -11,13 +11,15 @@
 | タスク            | 目的                                                                 | 前提                                                        |
 | ----------------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `make help`       | 利用可能なタスクを一覧表示（デフォルトターゲット）                   | なし                                                        |
-| `make setup`      | SwiftLint / swift-format を Homebrew で導入                          | Homebrew                                                    |
+| `make setup`      | SwiftLint / swift-format / typos-cli を Homebrew で導入              | Homebrew                                                    |
 | `make build`      | Debug 構成で iOS Simulator 向けビルド                                | Xcode                                                       |
 | `make build-release` | Release 構成でビルド                                              | Xcode                                                       |
 | `make test`       | ユニットテストを実行                                                 | Xcode プロジェクトにテストターゲット登録済み（後述）        |
 | `make lint`       | SwiftLint による静的解析                                             | `swiftlint`（`make setup` で導入可能）                      |
 | `make lint-fix`   | SwiftLint の自動修正                                                 | 同上                                                        |
 | `make format`     | `InstaDirectOnly` / `InstaDirectOnlyTests` 配下を swift-format で整形 | `swift-format`（`make setup` で導入可能）                   |
+| `make typos`      | `crate-ci/typos` によるスペルチェック（CI と同じ `.typos.toml` を使用） | `typos`（`make setup` で導入可能）                        |
+| `make typos-fix`  | typos の自動修正（`--write-changes`）                                | 同上                                                        |
 | `make clean`      | `xcodebuild clean` と `build` / `DerivedData` ディレクトリの削除     | Xcode                                                       |
 | `make open`       | `InstaDirectOnly.xcodeproj` を Xcode で開く                          | Xcode                                                       |
 | `make print-config` | 現在の変数値（`PROJECT` / `SCHEME` など）を表示                   | なし                                                        |
@@ -57,7 +59,7 @@ make print-config
 ### 1. 初回セットアップ
 
 ```bash
-# 開発ツールの導入（SwiftLint / swift-format）
+# 開発ツールの導入（SwiftLint / swift-format / typos-cli）
 make setup
 
 # プロジェクトを Xcode で開く
@@ -67,17 +69,19 @@ make open
 ### 2. 日次の開発ループ
 
 ```bash
-# 変更 → format → lint → build → test の順に実行するのが基本
+# 変更 → format → lint → typos → build → test の順に実行するのが基本
 make format
 make lint
+make typos
 make build
 make test          # 事前にテストターゲット登録が必要（下記参照）
 ```
 
-自動修正できる SwiftLint 違反はまとめて直せます:
+自動修正できる SwiftLint 違反・typos はまとめて直せます:
 
 ```bash
 make lint-fix
+make typos-fix
 ```
 
 ### 3. PR を出す前のチェック
@@ -85,11 +89,12 @@ make lint-fix
 ```bash
 make clean         # 生成物をクリアしてからやり直す
 make lint
+make typos
 make build
 make test
 ```
 
-CI と同じ条件で確認したい場合は `DESTINATION` を CI ワークフロー（`.github/workflows/`）と揃えてください。
+CI と同じ条件で確認したい場合は `DESTINATION` を CI ワークフロー（`.github/workflows/`）と揃えてください。`make typos` は CI (`.github/workflows/typos.yml`) と同じ設定ファイル (`.typos.toml`) を参照するため、CI 失敗の切り分けにも使えます。
 
 ## `make test` の前提: テストターゲットの登録
 
@@ -134,6 +139,9 @@ swift-format --in-place --recursive InstaDirectOnly InstaDirectOnlyTests
 
 # make lint と等価
 swiftlint lint --quiet
+
+# make typos と等価
+typos --config ./.typos.toml
 ```
 
 ## 関連ドキュメント
@@ -142,6 +150,7 @@ swiftlint lint --quiet
 - [`docs/TESTING.md`](./TESTING.md) — テストターゲット追加と検証観点
 - [`docs/RELEASE.md`](./RELEASE.md) — バージョン bump / タグ / GitHub Releases
 - [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — 変更影響範囲を掴むための構成解説
+- [`docs/CI.md`](./CI.md) — GitHub Actions ワークフローの一次リファレンス
 - [`README.md`](../README.md) — アプリの機能・URL ポリシー・エラーハンドリング
 
 ## ドキュメントを更新する時のガイド

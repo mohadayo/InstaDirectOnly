@@ -26,7 +26,7 @@ XCODEBUILD   := xcodebuild \
 .PHONY: help
 help: ## 利用可能なタスクを一覧表示
 	@printf "Usage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # ===== ビルド =====
 .PHONY: build
@@ -77,19 +77,40 @@ format: ## swift-format を実行 (要: brew install swift-format)
 	}
 	swift-format --in-place --recursive InstaDirectOnly InstaDirectOnlyTests
 
+# ===== Spell check =====
+# `.github/workflows/typos.yml` が CI で走らせる `crate-ci/typos` と同じ設定
+# (`.typos.toml`) をローカルで実行できるようにする。CI 失敗の切り分けや
+# push 前のセルフチェックで使う。
+.PHONY: typos
+typos: ## typos (スペルチェッカ) を実行 (要: brew install typos-cli)
+	@command -v typos >/dev/null 2>&1 || { \
+		echo "typos が見つかりません。'brew install typos-cli' を実行するか、'make setup' でまとめて導入してください。"; \
+		exit 1; \
+	}
+	typos --config ./.typos.toml
+
+.PHONY: typos-fix
+typos-fix: ## typos の自動修正を実行 (--write-changes)
+	@command -v typos >/dev/null 2>&1 || { \
+		echo "typos が見つかりません。'brew install typos-cli' を実行するか、'make setup' でまとめて導入してください。"; \
+		exit 1; \
+	}
+	typos --config ./.typos.toml --write-changes
+
 # ===== 便利コマンド =====
 .PHONY: open
 open: ## Xcode でプロジェクトを開く
 	open $(PROJECT)
 
 .PHONY: setup
-setup: ## 開発ツール (SwiftLint / swift-format) を Homebrew で導入
+setup: ## 開発ツール (SwiftLint / swift-format / typos-cli) を Homebrew で導入
 	@command -v brew >/dev/null 2>&1 || { \
 		echo "Homebrew が見つかりません。https://brew.sh/ を参照してインストールしてください。"; \
 		exit 1; \
 	}
 	@brew list swiftlint    >/dev/null 2>&1 || brew install swiftlint
 	@brew list swift-format >/dev/null 2>&1 || brew install swift-format
+	@brew list typos-cli    >/dev/null 2>&1 || brew install typos-cli
 
 .PHONY: print-config
 print-config: ## 現在の変数値を表示 (デバッグ用)
