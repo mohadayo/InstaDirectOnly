@@ -12,8 +12,9 @@
 - [2. actionlint](#2-actionlint)
 - [3. link-check](#3-link-check)
 - [4. stale](#4-stale)
-- [5. ワークフローを追加・変更する時のガイド](#5-ワークフローを追加変更する時のガイド)
-- [6. トラブルシューティング](#6-トラブルシューティング)
+- [5. typos](#5-typos)
+- [6. ワークフローを追加・変更する時のガイド](#6-ワークフローを追加変更する時のガイド)
+- [7. トラブルシューティング](#7-トラブルシューティング)
 
 ## 1. ワークフロー一覧
 
@@ -22,6 +23,7 @@
 | [actionlint](#2-actionlint) | [`.github/workflows/actionlint.yml`](../.github/workflows/actionlint.yml) | `push` / `pull_request`（ワークフロー YAML の変更時）+ 手動 | `contents: read` | PR がマージ不可（ワークフロー YAML の構文・shellcheck エラー検知） |
 | [link-check](#3-link-check) | [`.github/workflows/link-check.yml`](../.github/workflows/link-check.yml) | 週次（月曜 00:00 UTC）+ `main` への Markdown 変更 push + 手動 | `contents: read` | 通知のみ（`pull_request` トリガー無し）。リンク切れの早期検知 |
 | [stale](#4-stale) | [`.github/workflows/stale.yml`](../.github/workflows/stale.yml) | 日次（01:30 UTC）+ 手動 | `issues: write` / `pull-requests: write` | 通知のみ。長期未更新の Issue / PR にラベル付け・自動クローズ |
+| [typos](#5-typos) | [`.github/workflows/typos.yml`](../.github/workflows/typos.yml) | `main` への push + `pull_request` + 手動 | `contents: read` | PR がマージ不可（Markdown / Swift コメント・識別子等のスペル誤りを検知） |
 
 > 注: 本リポジトリはコード自体（Swift / iOS）のビルド・テストを実行する CI は現時点で導入されていません。ローカルでのビルド・テスト手順は [`docs/DEV_COMMANDS.md`](./DEV_COMMANDS.md) と [`docs/TESTING.md`](./TESTING.md) を参照してください。Swift ビルドを含む CI 導入は将来的な改善候補です。
 
@@ -87,7 +89,28 @@
   2. 継続対応する予定であれば `pinned` / `in-progress` などの除外ラベルを付与する
   3. マイルストーンを付与するのも有効（自動除外対象になる）
 
-## 5. ワークフローを追加・変更する時のガイド
+## 5. typos
+
+- **目的**: リポジトリ配下の Markdown / Swift ソース等に含まれるコメント・識別子のスペル誤りを [crate-ci/typos](https://github.com/crate-ci/typos) で検知する。`actionlint`（YAML）/ `link-check`（Markdown リンク）とは役割が独立しており、スペル観点のみを担う軽量ジョブ。
+- **トリガー**:
+  - `push`（`main` ブランチ）
+  - `pull_request`（全ブランチ対象）
+  - `workflow_dispatch`（手動実行）
+- **権限**: `contents: read`（読み取り専用）
+- **並行制御**: `concurrency: typos-${{ github.ref }}` / `cancel-in-progress: true`（同一 ref で古い実行をキャンセル）
+- **タイムアウト**: 5 分
+- **設定ファイル**: [`.typos.toml`](../.typos.toml) に allowlist と除外対象を集約。
+  - `[default.extend-identifiers]` / `[default.extend-words]`: iOS / Web 領域の技術用語や、本プロジェクトで意図的に採用した造語（`Unparseable` など）を許容する。
+  - `[files].extend-exclude`: Xcode 生成物（`*.xcassets` / `*.pbxproj` / `*.storyboard` / `*.plist` 等）、ロックファイル、`CHANGELOG.md` をチェック対象外とする。
+- **誤検知を抑制したい場合**:
+  1. 商標名・別綴りが標準的・独自造語など、辞書に無い根拠を 1 行コメントとして残した上で [`.typos.toml`](../.typos.toml) の `extend-identifiers` / `extend-words` に追記する。
+  2. ファイル単位でチェック対象外にしたい場合は `extend-exclude` にパターンを追加する（バイナリ・自動生成物向け）。
+- **失敗時の対処**:
+  1. PR のジョブログで typos が報告した **ファイル・行番号・提案綴り** を確認する。
+  2. 本当の typo であれば提案綴りに修正する。意図的な綴りであれば上記の allowlist を更新する。
+  3. ローカルで再現するには [typos のインストール手順](https://github.com/crate-ci/typos#install) を参照し、`typos --config ./.typos.toml` を実行する。
+
+## 6. ワークフローを追加・変更する時のガイド
 
 - **静的解析を通す**: 変更後は `actionlint` ワークフローが自動で走ります。ローカルで先に検証したい場合は `brew install actionlint && actionlint -color .github/workflows/*.yml` を実行してください。
 - **権限は最小に**: 各ジョブの `permissions:` は必要な範囲だけを列挙します（デフォルトの `contents: read` を維持し、書き込みが必要なジョブでのみ拡張する）。
@@ -96,7 +119,7 @@
 - **サードパーティ Action は SHA ピン留めを検討**: セキュリティ上重要なジョブでは、`@v4` のようなタグ参照ではなく SHA によるピン留めを検討してください（現状はメジャータグ参照で運用）。
 - **ドキュメント同期**: 新規ワークフローを追加した場合は、本ファイルの「[1. ワークフロー一覧](#1-ワークフロー一覧)」テーブルと個別節を追加し、[`docs/README.md`](./README.md) 側のインデックスも合わせて更新してください。
 
-## 6. トラブルシューティング
+## 7. トラブルシューティング
 
 - **ジョブが起動しない**
   - `paths:` フィルタで対象パスが除外されている可能性があります。`.github/workflows/*.yml` の `on:` セクションを確認してください。
@@ -107,7 +130,10 @@
   - `--exclude` や `--exclude-file` を追加して除外する方針を検討します。プロジェクトとして生存性を確認したいドメインは、除外前に許容ステータスコードの追加で救えないかを検討してください。
 - **`stale` が意図せず大量に走ってしまった**
   - `operations-per-run` を一時的に小さくして影響範囲を絞り、`exempt-*-labels` の付与漏れを見直します。既にクローズされた Issue / PR は再オープンしてから対応します。
+- **`typos` が意図した綴りを誤検知する**
+  - [`.typos.toml`](../.typos.toml) の `extend-identifiers` / `extend-words` に、根拠コメントと共に追記してください。ファイル単位で除外したい場合は `extend-exclude` にパターンを追加します。
 
 ## 変更履歴
 
 - 2026-09: 初版作成。既存の `actionlint` / `link-check` / `stale` ワークフローを一次リファレンスとしてまとめた。
+- 2026-10: 既存の `typos` ワークフロー（スペルチェック）を一次リファレンスとして追記。合わせて目次と「ワークフロー一覧」テーブル、トラブルシューティング節も更新。
