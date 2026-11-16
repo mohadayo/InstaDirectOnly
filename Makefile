@@ -97,6 +97,19 @@ typos-fix: ## typos の自動修正を実行 (--write-changes)
 	}
 	typos --config ./.typos.toml --write-changes
 
+# ===== CITATION.cff validation =====
+# `.github/workflows/validate-cff.yml` が CI で走らせる
+# `cffconvert --infile CITATION.cff --validate` と同じスキーマ検証を
+# ローカルで実行できるようにする。CITATION.cff を編集した際の事前確認や
+# CI 失敗の切り分けで使う。cffconvert のバージョンは CI と揃えて 2.0.0 固定。
+.PHONY: validate-cff
+validate-cff: ## CITATION.cff のスキーマ検証を実行 (要: pip install cffconvert==2.0.0)
+	@command -v cffconvert >/dev/null 2>&1 || { \
+		echo "cffconvert が見つかりません。'python -m pip install --user cffconvert==2.0.0' などで導入してください (CI とバージョンを揃える目的で 2.0.0 を推奨)。"; \
+		exit 1; \
+	}
+	cffconvert --infile CITATION.cff --validate
+
 # ===== 便利コマンド =====
 .PHONY: open
 open: ## Xcode でプロジェクトを開く

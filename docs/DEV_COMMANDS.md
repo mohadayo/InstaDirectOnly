@@ -20,6 +20,7 @@
 | `make format`     | `InstaDirectOnly` / `InstaDirectOnlyTests` 配下を swift-format で整形 | `swift-format`（`make setup` で導入可能）                   |
 | `make typos`      | `crate-ci/typos` によるスペルチェック（CI と同じ `.typos.toml` を使用） | `typos`（`make setup` で導入可能）                        |
 | `make typos-fix`  | typos の自動修正（`--write-changes`）                                | 同上                                                        |
+| `make validate-cff` | `CITATION.cff` のスキーマ検証（CI と同じ `cffconvert --validate`、バージョンも `2.0.0` 固定） | `cffconvert`（`python -m pip install --user cffconvert==2.0.0`） |
 | `make clean`      | `xcodebuild clean` と `build` / `DerivedData` ディレクトリの削除     | Xcode                                                       |
 | `make open`       | `InstaDirectOnly.xcodeproj` を Xcode で開く                          | Xcode                                                       |
 | `make print-config` | 現在の変数値（`PROJECT` / `SCHEME` など）を表示                   | なし                                                        |
@@ -96,6 +97,8 @@ make test
 
 CI と同じ条件で確認したい場合は `DESTINATION` を CI ワークフロー（`.github/workflows/`）と揃えてください。`make typos` は CI (`.github/workflows/typos.yml`) と同じ設定ファイル (`.typos.toml`) を参照するため、CI 失敗の切り分けにも使えます。
 
+`CITATION.cff` を編集した PR では、`validate-cff` ワークフロー (`.github/workflows/validate-cff.yml`) が CI で走ります。ローカルでも `make validate-cff` を実行すると同じ `cffconvert --validate` で事前検証できます（CI と同じ `cffconvert==2.0.0` を利用）。
+
 ## `make test` の前提: テストターゲットの登録
 
 `InstaDirectOnlyTests/` 配下にはユニットテスト（`InstagramWebViewConstantsTests.swift` など）がありますが、テストターゲットが Xcode プロジェクトに登録されていない状態では以下のエラーで失敗します。
@@ -142,6 +145,9 @@ swiftlint lint --quiet
 
 # make typos と等価
 typos --config ./.typos.toml
+
+# make validate-cff と等価
+cffconvert --infile CITATION.cff --validate
 ```
 
 ## 関連ドキュメント
