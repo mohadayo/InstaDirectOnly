@@ -1,0 +1,61 @@
+# Markdown ドキュメント静的解析
+#
+# 目的:
+#   リポジトリ配下の Markdown ファイル (README / CHANGELOG を除く
+#   docs 配下・プロジェクト直下・.github 配下) の構造上の問題
+#   (見出し階層の飛び・リスト記法の不統一・コードブロック周辺の
+#   空行欠落・箇条書き末尾の空白など) を PR / push 時点で早期検知する。
+#   既存の actionlint (YAML/Actions) / link-check (URL 生存) /
+#   typos (スペル) と役割は独立しており、Markdown の構造観点のみを
+#   担う軽量ジョブとして走らせる。
+#
+# 設計上のポイント:
+#   - 検査ルール・対象グロブ・除外は `.markdownlint-cli2.jsonc` に集約。
+#     日本語ドキュメントが中心のため、行長 (MD013) ・コードブロック
+#     言語指定 (MD040) ・見出し末尾句読点 (MD026) 等は緩める。
+#   - markdownlint-cli2 を Node.js 20 環境で npx 経由で実行。
+#     バージョンは明示的にピン留め (再現性と供給連鎖観点)。
+#   - 権限は `contents: read` のみに限定する。
+#   - `concurrency` により同一 ref の多重実行を抑止し、ランナー資源を節約。
+#   - `timeout-minutes: 5` でハングを防止。
+
+name: markdownlint
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+      - '.markdownlint-cli2.jsonc'
+      - '.github/workflows/markdownlint.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - '.markdownlint-cli2.jsonc'
+      - '.github/workflows/markdownlint.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: markdownlint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run markdownlint-cli2
+        run: npx --yes markdownlint-cli2@0.14.0

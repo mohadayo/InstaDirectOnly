@@ -39,7 +39,7 @@ WebView が拒否・許可した URL・ドメインが問題の中心なら、
 allowedHosts / allowedSchemes / allowedAboutURLs）の再検討に必要です。
 -->
 
-- 遷移しようとした URL: 
+- 遷移しようとした URL:
 - 実際の挙動（ブロック / DM 受信箱へ戻された / 白ビュー のいずれか）:
 
 ## エラーオーバーレイ表示（該当する場合のみ）
