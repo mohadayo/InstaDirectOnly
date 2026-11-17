@@ -42,9 +42,11 @@
 
 - `feat: / fix: / refactor: / test: / docs: / chore: ...` のプレフィックス一覧と、件名 50 文字・本文 72 文字折り返しのガイドをテンプレート化。
 - リポジトリローカルで有効化するコマンド:
+
   ```bash
   git config --local commit.template .gitmessage
   ```
+
 - **連携**: 推奨プレフィックスの一覧は [`CONTRIBUTING.md`](../CONTRIBUTING.md) の「コミットメッセージ」節とも整合させています。更新する場合は両者を同時に修正してください。
 
 ### `.swift-format`
