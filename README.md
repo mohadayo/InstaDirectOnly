@@ -2,7 +2,9 @@
 
 [![Actionlint](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/actionlint.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/actionlint.yml)
 [![Link Check](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/link-check.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/link-check.yml)
+[![markdownlint](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/markdownlint.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/markdownlint.yml)
 [![Typos](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/typos.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/typos.yml)
+[![validate-cff](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/validate-cff.yml/badge.svg)](https://github.com/mohadayo/InstaDirectOnly/actions/workflows/validate-cff.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Swift](https://img.shields.io/badge/swift-5.9+-fa7343.svg?logo=swift&logoColor=white)](InstaDirectOnly/)
 [![iOS](https://img.shields.io/badge/iOS-17+-black.svg?logo=apple&logoColor=white)](InstaDirectOnly/)
