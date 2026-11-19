@@ -22,8 +22,8 @@ InstaDirectOnly への貢献に興味を持っていただきありがとうご�
 
 ## コーディング規約
 
-- インデントは 4 スペース（Xcode デフォルト）
-- 行長は 140 文字を目安（`.swiftlint.yml` 導入後は SwiftLint 準拠）
+- インデントは 4 スペース（Xcode デフォルト / [`.editorconfig`](.editorconfig) にも同設定）
+- 行長は 120 文字を目安（[`.swift-format`](.swift-format) の `lineLength: 120` に準拠。整形は `make format`、リントは `make lint` で [`Makefile`](Makefile) 経由で実行できます）
 - 命名は Swift API Design Guidelines に従う
 - `// TODO:` を残す場合は Issue 番号を併記する
 - `print` によるデバッグ出力は PR 前に削除、ログが必要な場合は `os_log` / `Logger` を使う
