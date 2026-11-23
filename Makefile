@@ -110,6 +110,17 @@ validate-cff: ## CITATION.cff のスキーマ検証を実行 (要: pip install c
 	}
 	cffconvert --infile CITATION.cff --validate
 
+# ===== CI 相当チェック =====
+# CI (`.github/workflows/`) が実行する検査をローカルで一括再現する集約ターゲット。
+# push 前のセルフチェックや CI 失敗時のローカル再現で使う。
+# 依存ターゲットを順に実行し、途中で失敗すると Make のデフォルト挙動により
+# 残りのターゲットはスキップされる。
+#
+# Swift の `test` は Xcode プロジェクトへのテストターゲット登録が前提
+# (既存 `test` ターゲットの NOTE 参照) のため CI 対象外として本集約には含めない。
+.PHONY: ci
+ci: lint typos validate-cff ## CI 相当のローカルチェックを一括実行 (lint + typos + validate-cff)
+
 # ===== 便利コマンド =====
 .PHONY: open
 open: ## Xcode でプロジェクトを開く
