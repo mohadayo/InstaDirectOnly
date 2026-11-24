@@ -11,7 +11,7 @@
 | タスク            | 目的                                                                 | 前提                                                        |
 | ----------------- | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `make help`       | 利用可能なタスクを一覧表示（デフォルトターゲット）                   | なし                                                        |
-| `make setup`      | SwiftLint / swift-format / typos-cli を Homebrew で導入              | Homebrew                                                    |
+| `make setup`      | SwiftLint / swift-format / typos-cli / lychee を Homebrew で導入     | Homebrew                                                    |
 | `make build`      | Debug 構成で iOS Simulator 向けビルド                                | Xcode                                                       |
 | `make build-release` | Release 構成でビルド                                              | Xcode                                                       |
 | `make test`       | ユニットテストを実行                                                 | Xcode プロジェクトにテストターゲット登録済み（後述）        |
@@ -20,6 +20,7 @@
 | `make format`     | `InstaDirectOnly` / `InstaDirectOnlyTests` 配下を swift-format で整形 | `swift-format`（`make setup` で導入可能）                   |
 | `make typos`      | `crate-ci/typos` によるスペルチェック（CI と同じ `.typos.toml` を使用） | `typos`（`make setup` で導入可能）                        |
 | `make typos-fix`  | typos の自動修正（`--write-changes`）                                | 同上                                                        |
+| `make link-check` | `lychee` で Markdown のリンク切れを検査（CI と同じ引数を使用）       | `lychee`（`make setup` で導入可能）、ネットワーク接続       |
 | `make validate-cff` | `CITATION.cff` のスキーマ検証（CI と同じ `cffconvert --validate`、バージョンも `2.0.0` 固定） | `cffconvert`（`python -m pip install --user cffconvert==2.0.0`） |
 | `make clean`      | `xcodebuild clean` と `build` / `DerivedData` ディレクトリの削除     | Xcode                                                       |
 | `make open`       | `InstaDirectOnly.xcodeproj` を Xcode で開く                          | Xcode                                                       |
@@ -60,7 +61,7 @@ make print-config
 ### 1. 初回セットアップ
 
 ```bash
-# 開発ツールの導入（SwiftLint / swift-format / typos-cli）
+# 開発ツールの導入（SwiftLint / swift-format / typos-cli / lychee）
 make setup
 
 # プロジェクトを Xcode で開く
@@ -95,7 +96,13 @@ make build
 make test
 ```
 
-CI と同じ条件で確認したい場合は `DESTINATION` を CI ワークフロー（`.github/workflows/`）と揃えてください。`make typos` は CI (`.github/workflows/typos.yml`) と同じ設定ファイル (`.typos.toml`) を参照するため、CI 失敗の切り分けにも使えます。
+Markdown ファイルを編集した PR では、CI の `link-check` ワークフローが落ちていないかをローカルで事前確認できます（外部ネットワークへの到達を伴います）。
+
+```bash
+make link-check
+```
+
+CI と同じ条件で確認したい場合は `DESTINATION` を CI ワークフロー（`.github/workflows/`）と揃えてください。`make typos` は CI (`.github/workflows/typos.yml`) と同じ設定ファイル (`.typos.toml`) を参照するため、CI 失敗の切り分けにも使えます。`make link-check` も CI (`.github/workflows/link-check.yml`) と同じ `--accept` / `--timeout` / `--retry-wait-time` / `--max-retries` / `--max-concurrency` オプションで `lychee` を呼び出すため、同様の切り分け用途に使えます。
 
 `CITATION.cff` を編集した PR では、`validate-cff` ワークフロー (`.github/workflows/validate-cff.yml`) が CI で走ります。ローカルでも `make validate-cff` を実行すると同じ `cffconvert --validate` で事前検証できます（CI と同じ `cffconvert==2.0.0` を利用）。
 
@@ -145,6 +152,18 @@ swiftlint lint --quiet
 
 # make typos と等価
 typos --config ./.typos.toml
+
+# make link-check と等価
+lychee \
+  --verbose \
+  --no-progress \
+  --accept 200,203,204,206,301,302,304,307,308,403,429 \
+  --max-concurrency 8 \
+  --timeout 20 \
+  --retry-wait-time 5 \
+  --max-retries 2 \
+  --exclude-mail \
+  './**/*.md'
 
 # make validate-cff と等価
 cffconvert --infile CITATION.cff --validate
