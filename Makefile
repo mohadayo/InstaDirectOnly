@@ -97,6 +97,29 @@ typos-fix: ## typos の自動修正を実行 (--write-changes)
 	}
 	typos --config ./.typos.toml --write-changes
 
+# ===== Link check =====
+# `.github/workflows/link-check.yml` が CI で走らせる `lychee-action` と
+# 同じ引数 (--accept / --timeout / --retry-wait-time / --max-retries /
+# --max-concurrency / --exclude-mail) で、リポジトリ配下の Markdown
+# ファイルに含まれる URL を検証する。CI 失敗の切り分けや Markdown 編集時の
+# 事前確認で使う。lychee のオプションは CI (link-check.yml) と揃える。
+.PHONY: link-check
+link-check: ## Markdown のリンク切れを lychee で検査 (要: brew install lychee)
+	@command -v lychee >/dev/null 2>&1 || { \
+		echo "lychee が見つかりません。'brew install lychee' を実行するか、'make setup' でまとめて導入してください。"; \
+		exit 1; \
+	}
+	lychee \
+		--verbose \
+		--no-progress \
+		--accept 200,203,204,206,301,302,304,307,308,403,429 \
+		--max-concurrency 8 \
+		--timeout 20 \
+		--retry-wait-time 5 \
+		--max-retries 2 \
+		--exclude-mail \
+		'./**/*.md'
+
 # ===== CITATION.cff validation =====
 # `.github/workflows/validate-cff.yml` が CI で走らせる
 # `cffconvert --infile CITATION.cff --validate` と同じスキーマ検証を
@@ -116,7 +139,7 @@ open: ## Xcode でプロジェクトを開く
 	open $(PROJECT)
 
 .PHONY: setup
-setup: ## 開発ツール (SwiftLint / swift-format / typos-cli) を Homebrew で導入
+setup: ## 開発ツール (SwiftLint / swift-format / typos-cli / lychee) を Homebrew で導入
 	@command -v brew >/dev/null 2>&1 || { \
 		echo "Homebrew が見つかりません。https://brew.sh/ を参照してインストールしてください。"; \
 		exit 1; \
@@ -124,6 +147,7 @@ setup: ## 開発ツール (SwiftLint / swift-format / typos-cli) を Homebrew �
 	@brew list swiftlint    >/dev/null 2>&1 || brew install swiftlint
 	@brew list swift-format >/dev/null 2>&1 || brew install swift-format
 	@brew list typos-cli    >/dev/null 2>&1 || brew install typos-cli
+	@brew list lychee       >/dev/null 2>&1 || brew install lychee
 
 .PHONY: print-config
 print-config: ## 現在の変数値を表示 (デバッグ用)
