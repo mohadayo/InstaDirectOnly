@@ -28,6 +28,7 @@
 ### 開発環境・設定ファイル
 
 - **[CONFIG_FILES.md](./CONFIG_FILES.md)** — リポジトリ直下にあるドットファイル形式の設定ファイル群（`.editorconfig` / `.gitattributes` / `.gitignore` / `.gitmessage` / `.swift-format` / `.typos.toml`）について、目的・効果が及ぶ範囲・連動するツール/ワークフロー・編集時の注意点を 1 箇所にまとめた一次リファレンス。初めて貢献する開発者が「このドットファイルは何？編集してよい？」を把握するための入口。
+- **[GITHUB_META_FILES.md](./GITHUB_META_FILES.md)** — [`.github/`](../.github) 配下のワークフロー以外のメタファイル群（`CODEOWNERS` / `PULL_REQUEST_TEMPLATE.md` / `ISSUE_TEMPLATE/` / `SUPPORT.md` / `dependabot.yml` / `release.yml`）について、役割・効果が及ぶ範囲・連動するツール/ワークフロー・編集時の注意点をまとめた一次リファレンス。ワークフロー本体は [CI.md](./CI.md) 側で扱う。
 
 ### 方針・ロードマップ
 
