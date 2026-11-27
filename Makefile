@@ -133,6 +133,25 @@ validate-cff: ## CITATION.cff のスキーマ検証を実行 (要: pip install c
 	}
 	cffconvert --infile CITATION.cff --validate
 
+# ===== 集約チェック =====
+# `make check` は環境非依存のローカルチェック (lint / typos / link-check /
+# validate-cff) を Makefile の依存関係で順次実行する。
+# push 前のセルフチェックや、どのワークフローで落ちたかを一括で把握したい
+# 場合に使う。失敗したターゲットで停止するため、どのチェックで引っかかったかは
+# 最後に走ったターゲット名から辿れる。
+#
+# 含めない項目と理由:
+#   - build / test : xcodebuild (Xcode ツールチェイン) に依存するため、
+#                    CI でも macOS ランナー専用。必要な場合は
+#                    `make build test` を併用する。
+#   - format       : `swift-format --in-place` は副作用で差分を書き換える
+#                    ため、「push 前に副作用なく回したい」用途と相性が悪い。
+#                    差分なしを検査したい場合は別途 `format` + `git diff` を
+#                    手動で確認する運用。
+#   - lint-fix     : 同上 (自動修正系のため)。
+.PHONY: check
+check: lint typos link-check validate-cff ## ローカル CI 相当のチェックを一括実行
+
 # ===== 便利コマンド =====
 .PHONY: open
 open: ## Xcode でプロジェクトを開く
